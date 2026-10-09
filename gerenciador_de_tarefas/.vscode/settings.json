@@ -2,4 +2,4 @@
     "files.associations": {
         "**/templates/**/*.html": "jinja-html"
     }
-} **
+}
