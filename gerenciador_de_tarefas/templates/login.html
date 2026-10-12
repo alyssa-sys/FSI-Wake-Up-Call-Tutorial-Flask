@@ -1,0 +1,38 @@
+{% extends "base.html" %} {% block title %}Login - Gerenciador de Tarefas{%
+endblock %} {% block content %}
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-lado">
+      <div class="login-logo">
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="5" y="4" width="14" height="17" rx="2" />
+          <path d="M9 4h6v3H9z" />
+          <path d="m9 14 2 2 4-4" />
+        </svg>
+      </div>
+      <h2 class="fw-bold">Organize suas tarefas em um só lugar</h2>
+      <ul>
+        <li>✓ Crie e acompanhe suas tarefas</li>
+        <li>✓ Compartilhe com outras pessoas</li>
+        <li>✓ Veja o status de tudo de relance</li>
+      </ul>
+    </div>
+
+    <div class="login-form">
+      <h3 class="fw-bold mb-1">Bem-vindo de volta!</h3>
+      <p class="text-secondary mb-4">Entre para ver suas tarefas</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
