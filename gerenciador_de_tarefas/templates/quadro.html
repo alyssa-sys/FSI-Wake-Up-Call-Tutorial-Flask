@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu quadro</title>
+</head>
+<body>
+
+    <header>
+        <h1>Quadro de Tarefas</h1>
+        <p>Olá, {{ current_user.username }}!</p>
+        <a href="{{ url_for('logout') }}">Sair</a>
+    </header>
+
+    <!-- Mensagens do flash() -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alerta {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <main>
+
+        <!-- Minhas tarefas -->
+        <section>
+            <h2>Minhas tarefas</h2>
+
+            {% if tarefas %}
+                {% for tarefa in tarefas %}
+                    <article class="card">
+                        <h3>{{ tarefa.title }}</h3>
+                        <p>{{ tarefa.description }}</p>
+                        <small>Status: {{ tarefa.status }}</small>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p>Você ainda não criou nenhuma tarefa.</p>
+            {% endif %}
+        </section>
+
+        <!-- Tarefas compartilhadas -->
+        <section>
+            <h2>Compartilhadas comigo</h2>
+
+            {% if tarefas_compartilhadas %}
+                {% for tarefa in tarefas_compartilhadas %}
+                    <article class="card">
+                        <h3>{{ tarefa.title }}</h3>
+                        <p>{{ tarefa.description }}</p>
+                        <small>Status: {{ tarefa.status }}</small>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p>Nenhuma tarefa foi compartilhada com você.</p>
+            {% endif %}
+        </section>
+
+        <!-- Link só para admin -->
+        {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('quadro_admin') }}">Ir para o painel admin</a>
+        {% endif %}
+
+    </main>
+
+</body>
+</html>
