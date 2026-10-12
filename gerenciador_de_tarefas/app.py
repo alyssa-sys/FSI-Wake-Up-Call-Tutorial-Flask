@@ -1,3 +1,20 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Rota quadro/dashboard
 @app.route('/quadro')
 @login_required
@@ -16,5 +33,5 @@ def quadro_admin():
         return redirect(url_for('quadro'))
 
     tarefas = Task.query.all()
-    return render_template('quado_admin.html', tarefas = tarefas)
+    return render_template('quadro_admin.html', tarefas = tarefas)
 # sujeito a mudanças, feitos sem 'from flask import Flask'
