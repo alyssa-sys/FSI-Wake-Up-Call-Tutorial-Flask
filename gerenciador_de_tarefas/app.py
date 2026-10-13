@@ -217,24 +217,24 @@ def editar_tarefa(tarefa_id):
         return voltar_para_lista()
     return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now())
 
+#alterar apenas o status (usado pelo painel admin)
+@app.route('/alterar_status/<int:tarefa_id>', methods=['POST'])
+@login_required
+def alterar_status(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+    if not pode_mudar_status(tarefa):
+        flash('Você não tem permissão para alterar o status desta tarefa.', 'danger')
+        return voltar_para_lista()
 
+    status = request.form.get('status')
+    if status not in STATUS_VALIDOS:
+        flash('Status inválido.', 'danger')
+        return voltar_para_lista()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    tarefa.status = status
+    db.session.commit()
+    flash('Status atualizado!', 'success')
+    return voltar_para_lista()
 
 #excluir tarefa
 @app.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
