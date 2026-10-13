@@ -216,3 +216,37 @@ def editar_tarefa(tarefa_id):
         flash('Tarefa atualizada com sucesso!', 'success')
         return voltar_para_lista()
     return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#excluir tarefa
+@app.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
+@login_required
+def excluir_tarefa(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+    if not pode_excluir(tarefa):
+        flash('Só o criador da tarefa (ou um admin) pode excluí-la. Use o status "Cancelada" se não quiser fazê-la.', 'danger')
+        return voltar_para_lista()
+
+    db.session.delete(tarefa)
+    db.session.commit()
+
+    flash('Tarefa excluída com sucesso!', 'success')
+    return voltar_para_lista()
