@@ -15,26 +15,123 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # type: ignore
 
-# Rota quadro/dashboard
-@app.route('/quadro')
-@login_required
-def quadro():
-    tarefas = Task.query.filter_by(created_by =current_user.id).all()
-    tarefas_compartilhadas = Task.query.filter_by(shared_with = current_user.id).all()
-    return render_template('quadro.html', tarefas = tarefas, tarefas_compartilhadas = tarefas_compartilhadas)
-# sujeito a mudanças, ainda a definir variáveis e funções
 
-# Rota quadro(admin)
-@app.route('/admin')
-@login_required
-def quadro_admin():
-    if current_user.role != 'admin':
-        flash("Acesso não autorizado", 'danger')
-        return redirect(url_for('quadro'))
 
-    tarefas = Task.query.all()
-    return render_template('quado_admin.html', tarefas = tarefas)
-# sujeito a mudanças, feitos sem 'from flask import Flask'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #adicionar tarefa
 STATUS_VALIDOS = ['Pendente', 'Em andamento', 'Concluída', 'Cancelada']
@@ -77,6 +174,45 @@ def adicionar_tarefa():
 
         flash('Tarefa adicionada com sucesso!', 'success')
         return voltar_para_lista()
-
+    
     usuarios = Usuario.query.filter(Usuario.id != current_user.id).all()
     return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
+
+#editar tarefa
+@app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
+@login_required
+def editar_tarefa(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+
+    if not pode_mudar_status(tarefa):
+        flash('Você não tem permissão para editar esta tarefa.', 'danger')
+        return voltar_para_lista()
+    
+    if request.method == 'POST':
+        status = request.form['status']
+        if status not in STATUS_VALIDOS:
+            flash('Status inválido.', 'danger')
+            return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+
+        tarefa.status = status
+
+        # só criador e admin alteram título e descrição
+        if pode_editar(tarefa):
+            prioridade = request.form.get('prioridade', tarefa.prioridade or 'A definir')
+            if prioridade not in PRIORIDADES_VALIDAS:
+                flash('Prioridade inválida.', 'danger')
+                return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+            try:
+                prazo = validar_prazo(request.form.get('prazo'))
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+            tarefa.titulo = request.form['titulo'].strip()
+            tarefa.descricao = request.form['descricao'].strip()
+            tarefa.prioridade = prioridade
+            tarefa.prazo = prazo
+
+        db.session.commit()
+        flash('Tarefa atualizada com sucesso!', 'success')
+        return voltar_para_lista()
+    return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now())
