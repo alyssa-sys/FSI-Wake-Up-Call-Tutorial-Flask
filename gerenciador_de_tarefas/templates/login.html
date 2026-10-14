@@ -105,4 +105,12 @@ endblock %} {% block content %}
   </div>
 </div>
 
+<script>
+  document.getElementById("verSenha").addEventListener("click", function () {
+    var campo = document.getElementById("senha");
+    var mostrar = campo.type === "password";
+    campo.type = mostrar ? "text" : "password";
+    this.textContent = mostrar ? "Ocultar" : "Mostrar";
+  });
+</script>
 {% endblock %}
