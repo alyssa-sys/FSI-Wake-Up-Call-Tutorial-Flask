@@ -1,3 +1,5 @@
+import secrets
+from models import Usuario, Tarefa, Equipe, MembroEquipe
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -53,7 +55,9 @@ def pode_excluir(tarefa):
 def pode_mudar_status(tarefa):
     return pode_editar(tarefa) or current_user.id == tarefa.responsavel_id
 
-def voltar_para_lista():
+def voltar_para_lista(equipe_id=None):
+    if equipe_id:
+        return redirect(url_for('ver_equipe', equipe_id=equipe_id))
     return redirect(url_for('admin_dashboard') if eh_admin() else url_for('quadro'))
 
 app.jinja_env.globals.update(
@@ -63,6 +67,18 @@ app.jinja_env.globals.update(
     eh_admin=eh_admin,
     tarefa_atrasada=tarefa_atrasada,
 )
+
+def eh_membro(equipe):
+    return MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=current_user.id).first() is not None
+
+def eh_dono(equipe):
+    return current_user.id == equipe.dono_id
+
+def gerar_codigo():
+    while True:
+        codigo = secrets.token_hex(4).upper()
+        if not Equipe.query.filter_by(codigo_acesso=codigo).first():
+            return codigo
 
 @app.route('/')
 def home():

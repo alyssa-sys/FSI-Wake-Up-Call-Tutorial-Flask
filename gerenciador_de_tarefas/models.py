@@ -20,6 +20,7 @@ class Tarefa(db.Model):
     prazo = db.Column(db.DateTime, nullable=True, index=True)
     criador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=True)
 
 class Equipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
