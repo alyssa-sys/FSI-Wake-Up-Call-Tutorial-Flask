@@ -20,3 +20,19 @@ class Tarefa(db.Model):
     prazo = db.Column(db.DateTime, nullable=True, index=True)
     criador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+
+class Equipe(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    codigo_acesso = db.Column(db.String(12), unique=True, nullable=False)
+    dono_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    dono = db.relationship('Usuario', foreign_keys=[dono_id])
+    membros = db.relationship('MembroEquipe', backref='equipe', cascade='all, delete-orphan', lazy=True)
+    tarefas = db.relationship('Tarefa', backref='equipe', lazy=True)
+
+class MembroEquipe(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    usuario = db.relationship('Usuario')
+    __table_args__ = (db.UniqueConstraint('equipe_id', 'usuario_id'),)
