@@ -13,8 +13,10 @@ class Usuario(db.Model, UserMixin):
 
 class Tarefa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    titulo = db.Column(db.String(100), nullable=False)
+    titulo = db.Column(db.String(150), nullable=False)
     descricao = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='Pendente')
+    prioridade = db.Column(db.String(20), nullable=False, default='A definir')
+    prazo = db.Column(db.DateTime, nullable=True, index=True)
     criador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)

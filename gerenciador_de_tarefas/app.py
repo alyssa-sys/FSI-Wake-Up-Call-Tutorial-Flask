@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from extensions import db
@@ -19,6 +20,17 @@ login_manager.login_view = 'login' # type: ignore
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Usuario, int(user_id))
+def validar_prazo(valor):
+    valor = (valor or '').strip()
+    if not valor:
+        return None
+    try:
+        prazo = datetime.strptime(valor, '%Y-%m-%dT%H:%M')
+    except ValueError:
+        raise ValueError('Data e hora do prazo inválidas')
+    if prazo <= datetime.now():
+        raise ValueError('O prazo deve ser uma data e hora futura')
+    return prazo
 
 @app.route('/')
 def home():
@@ -75,6 +87,7 @@ def admin_dashboard():
     return render_template('quadro_admin.html', tarefas = tarefas)
 
 #adicionar tarefa
+PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
 @app.route('/adicionar_tarefa', methods=['GET', 'POST'])
 @login_required
 def adicionar_tarefa():
@@ -82,6 +95,15 @@ def adicionar_tarefa():
         titulo = request.form['titulo']
         descricao = request.form['descricao']
         status = 'Pendente'
+        prioridade = request.form.get('prioridade', 'A definir')
+        if prioridade not in PRIORIDADES_VALIDAS:
+            flash('Prioridade inválida.', 'danger')
+            return redirect(url_for('adicionar_tarefa'))
+        try:
+            prazo = validar_prazo(request.form.get('prazo'))
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('adicionar_tarefa'))
         try:
             responsavel_id = int(request.form.get('responsavel_id') or current_user.id)
         except ValueError:
@@ -91,7 +113,7 @@ def adicionar_tarefa():
             flash('Usuário responsável não encontrado.', 'danger')
             return redirect(url_for('adicionar_tarefa'))
 
-        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status=status, criador_id=current_user.id, responsavel_id=responsavel_id) # type: ignore
+        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status=status, prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id) # type: ignore
 
         db.session.add(nova_tarefa)
         db.session.commit()
