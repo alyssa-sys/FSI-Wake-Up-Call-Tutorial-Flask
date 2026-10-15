@@ -111,7 +111,7 @@ def login():
 @app.route('/admin')
 @login_required
 def admin_dashboard():
-    if current_user.cargo != 'admin':
+    if not eh_admin():
         flash("Acesso negado!", 'danger')
         return redirect(url_for('quadro'))
 
@@ -125,8 +125,8 @@ PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
 @login_required
 def adicionar_tarefa():
     if request.method == 'POST':
-        titulo = request.form['titulo']
-        descricao = request.form['descricao']
+        titulo = request.form['titulo'].strip()
+        descricao = request.form['descricao'].strip()
         status = 'Pendente'
         prioridade = request.form.get('prioridade', 'A definir')
         if prioridade not in PRIORIDADES_VALIDAS:
@@ -152,10 +152,10 @@ def adicionar_tarefa():
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
-        return redirect(url_for('quadro'))
+        return voltar_para_lista()
     
     usuarios = Usuario.query.filter(Usuario.id != current_user.id).all()
-    return render_template('adicionar_tarefa.html', usuarios=usuarios)
+    return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
@@ -184,12 +184,13 @@ def editar_tarefa(tarefa_id):
             try:
                 prazo = validar_prazo(request.form.get('prazo'))
             except ValueError as e:
-                flash(str(e), 'danger')
-                return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
-            tarefa.titulo = request.form['titulo'].strip()
-            tarefa.descricao = request.form['descricao'].strip()
-            tarefa.prioridade = prioridade
-            tarefa.prazo = prazo
+                prazo_enviado = request.form.get('prazo', '').strip()
+                prazo_atual = tarefa.prazo.strftime('%Y-%m-%dT%H:%M') if tarefa.prazo else None
+                if prazo_atual and prazo_enviado == prazo_atual:
+                    prazo = tarefa.prazo  # não mudou, mantém mesmo vencido
+                else:
+                    flash(str(e), 'danger')
+                    return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
 
         db.session.commit()
         flash('Tarefa atualizada com sucesso!', 'success')
@@ -220,26 +221,35 @@ def alterar_status(tarefa_id):
 @login_required
 def excluir_tarefa(tarefa_id):
     tarefa = db.get_or_404(Tarefa, tarefa_id)
-    if current_user.id != tarefa.criador_id and current_user.id != tarefa.responsavel_id:
-        flash('Você não tem permissão para excluir esta tarefa.', 'danger')
-        return redirect(url_for('quadro'))
-    
+    if not pode_excluir(tarefa):
+        flash('Só o criador da tarefa (ou um admin) pode excluí-la. Use o status "Cancelada" se não quiser fazê-la.', 'danger')
+        return voltar_para_lista()
+
     db.session.delete(tarefa)
     db.session.commit()
 
     flash('Tarefa excluída com sucesso!', 'success')
-    return redirect(url_for('quadro'))
+    return voltar_para_lista()
 
 #rota do quadro (Dashboard)
 @app.route('/quadro')
 @login_required
 def quadro():
-    minhas_tarefas = Tarefa.query.filter_by(criador_id=current_user.id).all()
-    tarefas_compartilhadas = Tarefa.query.filter(
-        Tarefa.responsavel_id==current_user.id, 
-        Tarefa.criador_id!=current_user.id
-        ).all()
-    return render_template('quadro.html', minhas_tarefas=minhas_tarefas, tarefas_compartilhadas=tarefas_compartilhadas)
+    recebidas = Tarefa.query.filter(
+        Tarefa.responsavel_id == current_user.id,
+        Tarefa.criador_id != current_user.id
+    ).all()
+    para_mim = Tarefa.query.filter(
+        Tarefa.responsavel_id == current_user.id,
+        Tarefa.criador_id == current_user.id
+    ).all()
+    delegadas = Tarefa.query.filter(
+        Tarefa.criador_id == current_user.id,
+        Tarefa.responsavel_id != current_user.id
+    ).all()
+    return render_template('quadro.html',
+                           atribuidas_a_mim=recebidas + para_mim,
+                           delegadas=delegadas)
 
 @app.route('/logout')
 @login_required
