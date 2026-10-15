@@ -16,10 +16,11 @@ login_manager.init_app(app)
 login_manager.login_view = 'login' # type: ignore
 
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Usuario, int(user_id))
+
+
 def validar_prazo(valor):
     valor = (valor or '').strip()
     if not valor:
@@ -41,6 +42,12 @@ def tarefa_atrasada(tarefa):
     return tarefa.prazo < datetime.now()
 
 
+# ---------------------------------------------------------------
+# Permissões das tarefas
+#   Criador:     vê, edita tudo, muda o status e exclui.
+#   Responsável: vê e muda o status. Não exclui.
+#   Admin:       faz tudo em qualquer tarefa, inclusive pelo painel.
+# ---------------------------------------------------------------
 def eh_admin():
     return getattr(current_user, 'cargo', None) == 'admin'
 
@@ -56,6 +63,7 @@ def pode_mudar_status(tarefa):
 def voltar_para_lista():
     return redirect(url_for('admin_dashboard') if eh_admin() else url_for('quadro'))
 
+# deixa as funções disponíveis em todos os templates (inclusive dentro de macros)
 app.jinja_env.globals.update(
     pode_editar=pode_editar,
     pode_excluir=pode_excluir,
@@ -64,17 +72,22 @@ app.jinja_env.globals.update(
     tarefa_atrasada=tarefa_atrasada,
 )
 
+
 @app.route('/')
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('quadro'))
     return redirect(url_for('login'))
+
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
         email = request.form['email'].strip().lower()
         nomeUsuario = request.form['nomeUsuario'].strip()
-        nome = request.form.get('nome') or nomeUsuario
+        if not nomeUsuario:
+            flash('O nome de usuário é obrigatório.', 'danger')
+            return redirect(url_for('registro'))
+        nome = request.form.get('nome', '').strip() or nomeUsuario
         senha = generate_password_hash(request.form['senha'])
 
         usuario = Usuario.query.filter((Usuario.email == email) | (Usuario.nomeUsuario == nomeUsuario)).first()
@@ -94,24 +107,26 @@ def registro():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email'].strip().lower()
+        identificador = request.form['identificador'].strip()
         senha = request.form['senha']
 
-        usuario = Usuario.query.filter_by(email=email).first()
+        usuario = Usuario.query.filter(
+            (Usuario.email == identificador.lower()) | (Usuario.nomeUsuario == identificador)
+        ).first()
+
         if usuario and check_password_hash(usuario.senha, senha):
             login_user(usuario)
             flash('Login realizado com sucesso!', 'success')
             return redirect(url_for('admin_dashboard') if usuario.cargo == 'admin' else url_for('quadro'))
         else:
-            flash('Email ou senha incorretos.', 'danger')
+            flash('Usuário/e-mail ou senha incorretos.', 'danger')
 
     return render_template('login.html')
-
 #admin
 @app.route('/admin')
 @login_required
 def admin_dashboard():
-    if current_user.cargo != 'admin':
+    if not eh_admin():
         flash("Acesso negado!", 'danger')
         return redirect(url_for('quadro'))
 
@@ -121,27 +136,33 @@ def admin_dashboard():
 #adicionar tarefa
 STATUS_VALIDOS = ['Pendente', 'Em andamento', 'Concluída', 'Cancelada']
 PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
+
 @app.route('/adicionar_tarefa', methods=['GET', 'POST'])
 @login_required
 def adicionar_tarefa():
     if request.method == 'POST':
-        titulo = request.form['titulo']
-        descricao = request.form['descricao']
+        titulo = request.form['titulo'].strip()
+        descricao = request.form['descricao'].strip()
         status = 'Pendente'
+
         prioridade = request.form.get('prioridade', 'A definir')
+
         if prioridade not in PRIORIDADES_VALIDAS:
             flash('Prioridade inválida.', 'danger')
             return redirect(url_for('adicionar_tarefa'))
+
         try:
             prazo = validar_prazo(request.form.get('prazo'))
         except ValueError as e:
             flash(str(e), 'danger')
             return redirect(url_for('adicionar_tarefa'))
+
         try:
             responsavel_id = int(request.form.get('responsavel_id') or current_user.id)
         except ValueError:
             flash('ID do responsável inválido.', 'danger')
             return redirect(url_for('adicionar_tarefa'))
+        
         if not db.session.get(Usuario, responsavel_id):
             flash('Usuário responsável não encontrado.', 'danger')
             return redirect(url_for('adicionar_tarefa'))
@@ -152,10 +173,10 @@ def adicionar_tarefa():
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
-        return redirect(url_for('quadro'))
-    
+        return voltar_para_lista()
+
     usuarios = Usuario.query.filter(Usuario.id != current_user.id).all()
-    return render_template('adicionar_tarefa.html', usuarios=usuarios)
+    return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
@@ -220,26 +241,35 @@ def alterar_status(tarefa_id):
 @login_required
 def excluir_tarefa(tarefa_id):
     tarefa = db.get_or_404(Tarefa, tarefa_id)
-    if current_user.id != tarefa.criador_id and current_user.id != tarefa.responsavel_id:
-        flash('Você não tem permissão para excluir esta tarefa.', 'danger')
-        return redirect(url_for('quadro'))
-    
+    if not pode_excluir(tarefa):
+        flash('Só o criador da tarefa (ou um admin) pode excluí-la. Use o status "Cancelada" se não quiser fazê-la.', 'danger')
+        return voltar_para_lista()
+
     db.session.delete(tarefa)
     db.session.commit()
 
     flash('Tarefa excluída com sucesso!', 'success')
-    return redirect(url_for('quadro'))
+    return voltar_para_lista()
 
 #rota do quadro (Dashboard)
 @app.route('/quadro')
 @login_required
 def quadro():
-    minhas_tarefas = Tarefa.query.filter_by(criador_id=current_user.id).all()
-    tarefas_compartilhadas = Tarefa.query.filter(
-        Tarefa.responsavel_id==current_user.id, 
-        Tarefa.criador_id!=current_user.id
-        ).all()
-    return render_template('quadro.html', minhas_tarefas=minhas_tarefas, tarefas_compartilhadas=tarefas_compartilhadas)
+    recebidas = Tarefa.query.filter(
+        Tarefa.responsavel_id == current_user.id,
+        Tarefa.criador_id != current_user.id
+    ).all()
+    para_mim = Tarefa.query.filter(
+        Tarefa.responsavel_id == current_user.id,
+        Tarefa.criador_id == current_user.id
+    ).all()
+    delegadas = Tarefa.query.filter(
+        Tarefa.criador_id == current_user.id,
+        Tarefa.responsavel_id != current_user.id
+    ).all()
+    return render_template('quadro.html',
+                           atribuidas_a_mim=recebidas + para_mim,
+                           delegadas=delegadas)
 
 @app.route('/logout')
 @login_required
