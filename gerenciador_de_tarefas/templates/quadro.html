@@ -2,113 +2,426 @@
 {% block title %}Quadro - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-{% macro coluna(titulo, lista, cor_borda, cor_badge) %}
+{% macro coluna(titulo, lista, classe, rotulo) %}
 <div class="col-12 col-md-6 col-lg-3">
-    <div class="coluna" style="border-top: 4px solid {{ cor_borda }};">
+
+    <div class="coluna {{ classe }}">
+
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">{{ titulo }}</h6>
-            <span class="badge rounded-pill bg-light text-dark border">{{ lista|length }}</span>
+            <h6 class="fw-semibold mb-0">{{ titulo }}</h6>
+            <span class="contador">{{ lista|length }}</span>
         </div>
 
         {% for tarefa in lista %}
+
         <div class="cartao-tarefa">
-            <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
-                 data-titulo="{{ tarefa.titulo }}"
-                 data-descricao="{{ tarefa.descricao or '' }}"
-                 data-status="{{ tarefa.status }}"
-                 data-cor="{{ cor_badge }}"
-                 data-criado="{{ tarefa.criador.nomeUsuario if tarefa.criador else '' }}"
-                 data-compartilhado="{{ tarefa.responsavel.nomeUsuario if tarefa.responsavel else '' }}"
-                 data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
-                <div class="fw-semibold mb-1">{{ tarefa.titulo }}</div>
+
+            <div
+                class="area-clique"
+                data-bs-toggle="modal"
+                data-bs-target="#modalTarefa"
+
+                data-titulo="{{ tarefa.titulo }}"
+                data-descricao="{{ tarefa.descricao or '' }}"
+                data-status="{{ tarefa.status }}"
+                data-cor="{{ classe }}"
+
+                data-criado="{{ tarefa.criador.nomeUsuario if tarefa.criador else '' }}"
+                data-compartilhado="{{ tarefa.responsavel.nomeUsuario if tarefa.responsavel else '' }}"
+
+                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') if tarefa.prazo else '' }}"
+                data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                data-atrasada="{{ 'true' if tarefa_atrasada(tarefa) else 'false' }}"
+
+                data-rotulo="{{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}"
+                data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+            >
+
+                <div class="fw-semibold mb-1">
+                    {{ tarefa.titulo }}
+                </div>
+
                 {% if tarefa.descricao %}
-                    <div class="text-secondary small">{{ tarefa.descricao|truncate(70) }}</div>
+                    <div class="text-secondary small">
+                        {{ tarefa.descricao|truncate(70) }}
+                    </div>
                 {% endif %}
+
+                {% if tarefa.prazo %}
+                    <div class="prazo-info {% if tarefa_atrasada(tarefa) %}prazo-atrasado{% endif %}">
+
+                        <span>
+                            Prazo:
+                            {{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') }}
+                        </span>
+
+                        {% if tarefa_atrasada(tarefa) %}
+                            <span class="badge-prazo">
+                                Atrasada
+                            </span>
+                        {% endif %}
+
+                    </div>
+                {% endif %}
+
+                {% if tarefa.prioridade != 'A definir' %}
+                    <div class="prioridade-info">
+                        Prioridade: {{ tarefa.prioridade }}
+                    </div>
+                {% endif %}
+
+                {% if rotulo == 'de' and tarefa.criador_id != tarefa.responsavel_id %}
+                    <div class="text-secondary small mt-1">
+                        de: {{ tarefa.criador.nomeUsuario }}
+                    </div>
+
+                {% elif rotulo == 'para' %}
+                    <div class="text-secondary small mt-1">
+                        para: {{ tarefa.responsavel.nomeUsuario }}
+                    </div>
+                {% endif %}
+
             </div>
+
             <div class="acoes d-flex gap-2 mt-3">
-                <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
-                <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
-                      onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
-                    <button type="submit" class="btn btn-outline-danger">Excluir</button>
+
+                <a
+                    href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                    class="btn btn-principal"
+                >
+                    {{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}
+                </a>
+
+                {% if pode_excluir(tarefa) %}
+
+                <form
+                    action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
+                    method="POST"
+                    onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');"
+                >
+                    <button
+                        type="submit"
+                        class="btn btn-outline-danger"
+                    >
+                        Excluir
+                    </button>
                 </form>
+
+                {% endif %}
+
             </div>
+
         </div>
+
         {% else %}
-            <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
+
+            <p class="text-secondary small text-center py-3 mb-0">
+                Nenhuma tarefa
+            </p>
+
         {% endfor %}
+
     </div>
 </div>
 {% endmacro %}
 
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
-    <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal">+ Nova tarefa</a>
+
+    <a
+        href="{{ url_for('adicionar_tarefa') }}"
+        class="btn btn-principal"
+    >
+        + Nova tarefa
+    </a>
 </div>
 
-<h5 class="fw-semibold mb-3">Suas tarefas</h5>
+
+<h5 class="fw-semibold mb-3">
+    Atribuídas a você
+</h5>
+
 <div class="row g-3">
-    {{ coluna('Pendente', minhas_tarefas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', minhas_tarefas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', minhas_tarefas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', minhas_tarefas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+
+    {{ coluna(
+        'Pendente',
+        atribuidas_a_mim|selectattr('status', 'equalto', 'Pendente')|list,
+        'status-pendente',
+        'de'
+    ) }}
+
+    {{ coluna(
+        'Em andamento',
+        atribuidas_a_mim|selectattr('status', 'equalto', 'Em andamento')|list,
+        'status-andamento',
+        'de'
+    ) }}
+
+    {{ coluna(
+        'Concluída',
+        atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list,
+        'status-concluida',
+        'de'
+    ) }}
+
+    {{ coluna(
+        'Cancelada',
+        atribuidas_a_mim|selectattr('status', 'equalto', 'Cancelada')|list,
+        'status-cancelada',
+        'de'
+    ) }}
+
 </div>
 
-<h5 class="fw-semibold mt-5 mb-3">Compartilhadas com você</h5>
+
+<h5 class="fw-semibold mt-5 mb-3">
+    Atribuídas a outras pessoas
+</h5>
+
+{% if delegadas %}
+
 <div class="row g-3 mb-5">
-    {{ coluna('Pendente', tarefas_compartilhadas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', tarefas_compartilhadas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', tarefas_compartilhadas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', tarefas_compartilhadas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+
+    {{ coluna(
+        'Pendente',
+        delegadas|selectattr('status', 'equalto', 'Pendente')|list,
+        'status-pendente',
+        'para'
+    ) }}
+
+    {{ coluna(
+        'Em andamento',
+        delegadas|selectattr('status', 'equalto', 'Em andamento')|list,
+        'status-andamento',
+        'para'
+    ) }}
+
+    {{ coluna(
+        'Concluída',
+        delegadas|selectattr('status', 'equalto', 'Concluída')|list,
+        'status-concluida',
+        'para'
+    ) }}
+
+    {{ coluna(
+        'Cancelada',
+        delegadas|selectattr('status', 'equalto', 'Cancelada')|list,
+        'status-cancelada',
+        'para'
+    ) }}
+
 </div>
 
-<!-- Janela de detalhes (somente leitura) -->
-<div class="modal fade" id="modalTarefa" tabindex="-1" aria-hidden="true">
+{% else %}
+
+<p class="text-secondary mb-5">
+    Você ainda não atribuiu tarefas a outras pessoas.
+</p>
+
+{% endif %}
+
+
+<!-- Janela de detalhes -->
+
+<div
+    class="modal fade"
+    id="modalTarefa"
+    tabindex="-1"
+    aria-hidden="true"
+>
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border:0; border-radius:16px;">
+
+        <div
+            class="modal-content"
+            style="border:0; border-radius:16px;"
+        >
+
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <h5
+                    class="modal-title fw-bold"
+                    id="modalTitulo"
+                ></h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                ></button>
+
             </div>
+
             <div class="modal-body">
+
                 <div class="mb-3">
-                    <div class="text-secondary small text-uppercase mb-1">Status</div>
-                    <span id="modalStatus" class="badge rounded-pill"></span>
+
+                    <div class="text-secondary small text-uppercase mb-1">
+                        Status
+                    </div>
+
+                    <span
+                        id="modalStatus"
+                        class="selo"
+                    ></span>
+
                 </div>
+
+
                 <div class="mb-3">
-                    <div class="text-secondary small text-uppercase mb-1">Descrição</div>
-                    <p id="modalDescricao" class="mb-0" style="white-space:pre-wrap;"></p>
+
+                    <div class="text-secondary small text-uppercase mb-1">
+                        Prazo
+                    </div>
+
+                    <div id="modalPrazo"></div>
+
                 </div>
+
+
+                <div class="mb-3">
+
+                    <div class="text-secondary small text-uppercase mb-1">
+                        Prioridade
+                    </div>
+
+                    <div id="modalPrioridade">
+                        A definir
+                    </div>
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <div class="text-secondary small text-uppercase mb-1">
+                        Descrição
+                    </div>
+
+                    <p
+                        id="modalDescricao"
+                        class="mb-0"
+                        style="white-space:pre-wrap;"
+                    ></p>
+
+                </div>
+
+
                 <div class="row">
+
                     <div class="col-6">
-                        <div class="text-secondary small text-uppercase mb-1">Criado por</div>
-                        <p id="modalCriado" class="mb-0"></p>
+
+                        <div class="text-secondary small text-uppercase mb-1">
+                            Criado por
+                        </div>
+
+                        <p
+                            id="modalCriado"
+                            class="mb-0"
+                        ></p>
+
                     </div>
+
                     <div class="col-6">
-                        <div class="text-secondary small text-uppercase mb-1">Compartilhado com</div>
-                        <p id="modalCompartilhado" class="mb-0"></p>
+
+                        <div class="text-secondary small text-uppercase mb-1">
+                            Responsável
+                        </div>
+
+                        <p
+                            id="modalCompartilhado"
+                            class="mb-0"
+                        ></p>
+
                     </div>
+
                 </div>
+
             </div>
+
+
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" style="border-radius:10px;" data-bs-dismiss="modal">Fechar</button>
-                <a id="modalEditar" href="#" class="btn btn-principal">Editar</a>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    style="border-radius:10px;"
+                    data-bs-dismiss="modal"
+                >
+                    Fechar
+                </button>
+
+                <a
+                    id="modalEditar"
+                    href="#"
+                    class="btn btn-principal"
+                >
+                    Editar
+                </a>
+
             </div>
+
         </div>
     </div>
 </div>
 
+
 <script>
-    document.getElementById('modalTarefa').addEventListener('show.bs.modal', function (event) {
-        var d = event.relatedTarget.dataset;
-        document.getElementById('modalTitulo').textContent = d.titulo;
-        document.getElementById('modalDescricao').textContent = d.descricao || 'Sem descrição.';
-        document.getElementById('modalCriado').textContent = d.criado || '—';
-        document.getElementById('modalCompartilhado').textContent = d.compartilhado || '—';
-        var status = document.getElementById('modalStatus');
-        status.textContent = d.status;
-        status.className = 'badge rounded-pill ' + d.cor;
-        document.getElementById('modalEditar').href = d.editar;
-    });
+    document
+        .getElementById('modalTarefa')
+        .addEventListener('show.bs.modal', function (event) {
+
+            var d = event.relatedTarget.dataset;
+
+            document.getElementById('modalTitulo').textContent =
+                d.titulo;
+
+            document.getElementById('modalDescricao').textContent =
+                d.descricao || 'Sem descrição.';
+
+            document.getElementById('modalCriado').textContent =
+                d.criado || '—';
+
+            document.getElementById('modalCompartilhado').textContent =
+                d.compartilhado || '—';
+
+            document.getElementById('modalPrioridade').textContent =
+                d.prioridade || 'A definir';
+
+
+            var status =
+                document.getElementById('modalStatus');
+
+            status.textContent = d.status;
+
+            status.className =
+                'selo ' + d.cor;
+
+
+            var prazo =
+                document.getElementById('modalPrazo');
+
+            prazo.textContent =
+                d.prazo || 'Sem prazo';
+
+            prazo.className =
+                d.atrasada === 'true'
+                    ? 'prazo-atrasado'
+                    : '';
+
+
+            if (d.atrasada === 'true') {
+                prazo.textContent += ' — Atrasada';
+            }
+
+
+            var editar =
+                document.getElementById('modalEditar');
+
+            editar.href = d.editar;
+
+            editar.textContent = d.rotulo;
+        });
 </script>
 
 {% endblock %}
