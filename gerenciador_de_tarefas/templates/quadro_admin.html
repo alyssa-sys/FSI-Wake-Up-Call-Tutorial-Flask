@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Painel do Administrador - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% macro pessoa(usuario) %}
+    {% if usuario %}
+        <span class="avatar">{{ usuario.nomeUsuario[:1]|upper }}</span>{{ usuario.nomeUsuario }}
+    {% else %}
+        <span class="text-secondary">—</span>
+    {% endif %}
+{% endmacro %}
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-1">Todas as tarefas</h2>
+    <p class="text-secondary mb-0">Visualização do administrador</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num">{{ tarefas|length }}</div><div class="text-secondary small">Total</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num" style="color:#0aa2c0;">{{ tarefas|selectattr('status', 'equalto', 'Pendente')|list|length }}</div><div class="text-secondary small">Pendentes</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num" style="color:#d39e00;">{{ tarefas|selectattr('status', 'equalto', 'Em andamento')|list|length }}</div><div class="text-secondary small">Em andamento</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num" style="color:#198754;">{{ tarefas|selectattr('status', 'equalto', 'Concluída')|list|length }}</div><div class="text-secondary small">Concluídas</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num" style="color:#dc3545;">{{ tarefas|selectattr('status', 'equalto', 'Cancelada')|list|length }}</div><div class="text-secondary small">Canceladas</div></div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <button type="button" class="filtro ativo" data-filtro="todas">Todas</button>
+    <button type="button" class="filtro" data-filtro="Pendente">Pendente</button>
+    <button type="button" class="filtro" data-filtro="Em andamento">Em andamento</button>
+    <button type="button" class="filtro" data-filtro="Concluída">Concluída</button>
+    <button type="button" class="filtro" data-filtro="Cancelada">Cancelada</button>
+</div>
+
+<div class="cartao" style="padding:1rem;">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr class="text-secondary small text-uppercase">
+                    <th>Título</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Criado por</th>
+                    <th>Compartilhado com</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tarefa in tarefas %}
+                <tr data-status="{{ tarefa.status }}">
+                    <td class="fw-semibold">{{ tarefa.titulo }}</td>
+                    <td class="text-secondary small">{{ (tarefa.descricao or '')|truncate(60) }}</td>
+                    <td>
+                        {% if tarefa.status == 'Concluída' %}
+                            <span class="badge rounded-pill bg-success">{{ tarefa.status }}</span>
+                        {% elif tarefa.status == 'Em andamento' %}
+                            <span class="badge rounded-pill bg-warning text-dark">{{ tarefa.status }}</span>
+                        {% elif tarefa.status == 'Cancelada' %}
+                            <span class="badge rounded-pill bg-danger">{{ tarefa.status }}</span>
+                        {% else %}
+                            <span class="badge rounded-pill bg-info text-dark">{{ tarefa.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ pessoa(tarefa.criador) }}</td>
+                    <td>{{ pessoa(tarefa.responsavel) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-secondary py-4">Nenhuma tarefa cadastrada.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.filtro').forEach(function (botao) {
+        botao.addEventListener('click', function () {
+            document.querySelectorAll('.filtro').forEach(function (b) { b.classList.remove('ativo'); });
+            botao.classList.add('ativo');
+            var filtro = botao.dataset.filtro;
+            document.querySelectorAll('tbody tr[data-status]').forEach(function (linha) {
+                linha.style.display = (filtro === 'todas' || linha.dataset.status === filtro) ? '' : 'none';
+            });
+        });
+    });
+</script>
+
+{% endblock %}
