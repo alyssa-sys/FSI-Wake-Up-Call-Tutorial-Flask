@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Equipes - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Equipes</h2>
+    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Minhas tarefas</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="cartao">
+            <h5 class="fw-bold">Criar equipe</h5>
+            <form method="POST" action="{{ url_for('criar_equipe') }}" class="d-flex gap-2">
+                <input type="text" name="nome" class="form-control" placeholder="Nome da equipe" maxlength="100" required>
+                <button type="submit" class="btn btn-principal">Criar</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="cartao">
+            <h5 class="fw-bold">Entrar com código</h5>
+            <form method="POST" action="{{ url_for('entrar_equipe') }}" class="d-flex gap-2">
+                <input type="text" name="codigo" class="form-control" placeholder="Código de acesso" required>
+                <button type="submit" class="btn btn-principal">Entrar</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<h5 class="fw-semibold mb-3">Equipes que você criou</h5>
+<div class="row g-3 mb-4">
+    {% for e in minhas %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
+            <div class="cartao">
+                <div class="fw-bold">{{ e.nome }}</div>
+                <div class="text-secondary small">{{ e.membros|length }} membro(s)</div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <p class="text-secondary small">Você ainda não criou nenhuma equipe.</p>
+    {% endfor %}
+</div>
+
+<h5 class="fw-semibold mb-3">Equipes em que você participa</h5>
+<div class="row g-3 mb-5">
+    {% for e in participo %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
+            <div class="cartao">
+                <div class="fw-bold">{{ e.nome }}</div>
+                <div class="text-secondary small">Criada por {{ e.dono.nomeUsuario }}</div>
+            </div>
+        </a>
+    </div>
+    {% else %}
+    <p class="text-secondary small">Você não participa de nenhuma equipe.</p>
+    {% endfor %}
+</div>
+
+{% endblock %}
