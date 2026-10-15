@@ -181,7 +181,7 @@ def editar_tarefa(tarefa_id):
 
     if not pode_mudar_status(tarefa):
         flash('Você não tem permissão para editar esta tarefa.', 'danger')
-        return voltar_para_lista()
+        return voltar_para_lista(tarefa.equipe_id)
 
     if request.method == 'POST':
         status = request.form['status']
@@ -215,7 +215,7 @@ def editar_tarefa(tarefa_id):
 
         db.session.commit()
         flash('Tarefa atualizada com sucesso!', 'success')
-        return voltar_para_lista()
+        return voltar_para_lista(tarefa.equipe_id)
     return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now())
 
 #alterar apenas o status (usado pelo painel admin)
@@ -225,32 +225,34 @@ def alterar_status(tarefa_id):
     tarefa = db.get_or_404(Tarefa, tarefa_id)
     if not pode_mudar_status(tarefa):
         flash('Você não tem permissão para alterar o status desta tarefa.', 'danger')
-        return voltar_para_lista()
+        return voltar_para_lista(tarefa.equipe_id)
 
     status = request.form.get('status')
     if status not in STATUS_VALIDOS:
         flash('Status inválido.', 'danger')
-        return voltar_para_lista()
+        return voltar_para_lista(tarefa.equipe_id)
 
     tarefa.status = status
     db.session.commit()
     flash('Status atualizado!', 'success')
-    return voltar_para_lista()
+    return voltar_para_lista(tarefa.equipe_id)
 
 #excluir tarefa
 @app.route('/excluir_tarefa/<int:tarefa_id>', methods=['POST'])
 @login_required
 def excluir_tarefa(tarefa_id):
     tarefa = db.get_or_404(Tarefa, tarefa_id)
+    equipe_id = tarefa.equipe_id  # guarda antes de apagar, para voltar à tela certa
+
     if not pode_excluir(tarefa):
         flash('Só o criador da tarefa (ou um admin) pode excluí-la. Use o status "Cancelada" se não quiser fazê-la.', 'danger')
-        return voltar_para_lista()
+        return voltar_para_lista(equipe_id)
 
     db.session.delete(tarefa)
     db.session.commit()
 
     flash('Tarefa excluída com sucesso!', 'success')
-    return voltar_para_lista()
+    return voltar_para_lista(equipe_id)
 
 #rota do quadro (Dashboard)
 @app.route('/quadro')
@@ -258,19 +260,139 @@ def excluir_tarefa(tarefa_id):
 def quadro():
     recebidas = Tarefa.query.filter(
         Tarefa.responsavel_id == current_user.id,
-        Tarefa.criador_id != current_user.id
+        Tarefa.criador_id != current_user.id,
+        Tarefa.equipe_id.is_(None)
     ).all()
     para_mim = Tarefa.query.filter(
         Tarefa.responsavel_id == current_user.id,
-        Tarefa.criador_id == current_user.id
+        Tarefa.criador_id == current_user.id,
+        Tarefa.equipe_id.is_(None)
     ).all()
     delegadas = Tarefa.query.filter(
         Tarefa.criador_id == current_user.id,
-        Tarefa.responsavel_id != current_user.id
+        Tarefa.responsavel_id != current_user.id,
+        Tarefa.equipe_id.is_(None)
     ).all()
     return render_template('quadro.html',
                            atribuidas_a_mim=recebidas + para_mim,
                            delegadas=delegadas)
+
+#rota das equipes
+@app.route('/equipes')
+@login_required
+def equipes():
+    minhas = Equipe.query.filter_by(dono_id=current_user.id).all()
+    participo = (Equipe.query.join(MembroEquipe, MembroEquipe.equipe_id == Equipe.id)).filter(MembroEquipe.usuario_id == current_user.id, Equipe.dono_id != current_user.id).all()
+    return render_template('equipes.html', minhas=minhas, participo=participo)
+
+@app.route('/equipes/criar', methods=['POST'])
+@login_required
+def criar_equipe():
+    nome = request.form.get('nome', '').strip()
+    if not nome:
+        flash('Dê um nome para a equipe.', 'danger')
+        return redirect(url_for('equipes'))
+    equipe = Equipe(nome=nome[:100], dono_id=current_user.id, codigo_acesso=gerar_codigo())
+    db.session.add(equipe)
+    db.session.flush()
+    db.session.add(MembroEquipe(equipe_id=equipe.id, usuario_id=current_user.id))
+    db.session.commit()
+    flash('Equipe criada!', 'success')
+    return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+@app.route('/equipes/entrar', methods=['POST'])
+@login_required
+def entrar_equipe():
+    codigo = request.form.get('codigo', '').strip().upper()
+    equipe = Equipe.query.filter_by(codigo_acesso=codigo).first()
+    if not equipe:
+        flash('Código de acesso inválido.', 'danger')
+        return redirect(url_for('equipes'))
+    if eh_membro(equipe):
+        flash('Você já é membro desta equipe.', 'info')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    db.session.add(MembroEquipe(equipe_id=equipe.id, usuario_id=current_user.id))
+    db.session.commit()
+    flash(f'Você entrou na equipe "{equipe.nome}".', 'success')
+    return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+@app.route('/equipes/<int:equipe_id>')
+@login_required
+def ver_equipe(equipe_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    if not eh_membro(equipe):
+        flash('Você não faz parte dessa equipe.', 'danger')
+        return redirect(url_for('equipes'))
+    tarefas = Tarefa.query.filter_by(equipe_id=equipe.id).all()
+    return render_template('equipe.html', equipe=equipe, tarefas=tarefas, membros=equipe.membros, dono=eh_dono(equipe))
+
+@app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])
+@login_required
+def adicionar_tarefa_equipe(equipe_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    if not eh_dono(equipe):
+        flash('Só o criador da equipe pode atribuir tarefas.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    membros = [m.usuario for m in equipe.membros]
+
+    if request.method == 'POST':
+        titulo = request.form['titulo'].strip()
+        descricao = request.form['descricao'].strip()
+        prioridade = request.form.get('prioridade', 'A definir')
+        if prioridade not in PRIORIDADES_VALIDAS:
+            flash('Prioridade inválida.', 'danger')
+            return redirect(url_for('adicionar_tarefa_equipe', equipe_id=equipe.id))
+        try:
+            prazo = validar_prazo(request.form.get('prazo'))
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('adicionar_tarefa_equipe', equipe_id=equipe.id))
+        try:
+            responsavel_id = int(request.form.get('responsavel_id') or 0)
+        except ValueError:
+            responsavel_id = 0
+        if responsavel_id not in {u.id for u in membros}:
+            flash('Escolha um membro da equipe como responsável.', 'danger')
+            return redirect(url_for('adicionar_tarefa_equipe', equipe_id=equipe.id))
+
+        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status='Pendente', prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id, equipe_id=equipe.id) # type: ignore
+        db.session.add(nova_tarefa)
+        db.session.commit()
+        flash('Tarefa atribuida!', 'success')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+    return render_template('adicionar_tarefa_equipe.html', equipe=equipe, membros=membros, agora=datetime.now())
+
+@app.route('/equipes/<int:equipe_id>/novo_codigo', methods=['POST'])
+@login_required
+def novo_codigo_equipe(equipe_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    if not eh_dono(equipe):
+        flash('Só o criador da equipe pode gerar um novo código.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    equipe.codigo_acesso = gerar_codigo()
+    db.session.commit()
+    flash('Novo código gerado. O anterior não vale mais.', 'success')
+    return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+@app.route('/equipes/<int:equipe_id>/remover/<int:usuario_id>', methods=['POST'])
+@login_required
+def remover_membro(equipe_id, usuario_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    sair = usuario_id == current_user.id
+    if sair and eh_dono(equipe):
+        flash('O criador não pode sair da própria equipe.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    if not sair and not eh_dono(equipe):
+        flash('Só o criador pode remover membros.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    membro = MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=usuario_id).first_or_404()
+    # tarefas do membro que saiu voltam para o criador
+    Tarefa.query.filter_by(equipe_id=equipe.id, responsavel_id=usuario_id).update({'responsavel_id': equipe.dono_id})
+    db.session.delete(membro)
+    db.session.commit()
+    flash('Pronto.', 'success')
+    return redirect(url_for('equipes') if sair else url_for('ver_equipe', equipe_id=equipe.id))
 
 @app.route('/logout')
 @login_required
