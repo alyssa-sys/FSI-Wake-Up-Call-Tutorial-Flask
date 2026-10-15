@@ -35,12 +35,6 @@
             </div>
             <div class="acoes d-flex gap-2 mt-3">
                 <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
-                {% if pode_excluir(tarefa) %}
-                <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
-                        onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
-                    <button type="submit" class="btn btn-outline-danger">Excluir</button>
-                </form>
-                {% endif %}
                 <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
                       onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
                     <button type="submit" class="btn btn-outline-danger">Excluir</button>
