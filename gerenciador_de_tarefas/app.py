@@ -166,7 +166,7 @@ def editar_tarefa(tarefa_id):
     if not pode_mudar_status(tarefa):
         flash('Você não tem permissão para editar esta tarefa.', 'danger')
         return voltar_para_lista()
-    
+
     if request.method == 'POST':
         status = request.form['status']
         if status not in STATUS_VALIDOS:
@@ -175,7 +175,7 @@ def editar_tarefa(tarefa_id):
 
         tarefa.status = status
 
-        # só criador e admin alteram título e descrição
+        # só criador e admin alteram título, descrição, prioridade e prazo
         if pode_editar(tarefa):
             prioridade = request.form.get('prioridade', tarefa.prioridade or 'A definir')
             if prioridade not in PRIORIDADES_VALIDAS:
@@ -191,6 +191,11 @@ def editar_tarefa(tarefa_id):
                 else:
                     flash(str(e), 'danger')
                     return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+
+            tarefa.titulo = request.form['titulo'].strip()
+            tarefa.descricao = request.form['descricao'].strip()
+            tarefa.prioridade = prioridade
+            tarefa.prazo = prazo
 
         db.session.commit()
         flash('Tarefa atualizada com sucesso!', 'success')
