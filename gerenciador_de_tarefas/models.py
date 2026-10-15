@@ -1,4 +1,4 @@
-from gerenciador_de_tarefas.extensions import db
+from extensions import db
 from flask_login import UserMixin
 
 class Usuario(db.Model, UserMixin):
