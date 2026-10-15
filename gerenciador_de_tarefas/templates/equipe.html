@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ equipe.nome }} - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-0">{{ equipe.nome}}</h2>
+        <div class="text-secondary small">Criada por {{ equipe.dono.nomeUsuario }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Equipes</a>
+        {% if dono %}
+        <a href="{{ url_for('adicionar_tarefa_equipe', equipe_id=equipe.id) }}" class="btn btn-principal">+ Atribuir tarefa</a>
+        {% endif %} 
+    </div>
+</div>
+
+{% if dono %}
+<div class="cartao mb-4">
+    <div class="text-secondary small text-uppercase mb-1">Codigo de acesso</div>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <code class="fs-5">{{ equipe.codigo_acesso }}</code>
+        <form method="POST" action="{{ url_for('novo_codigo_equipe', equipe_id=equipe.id) }}"
+              onsubmit="return confirm('O código atual deixará de funcionar. Continuar?');">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Gerar novo código</button>
+        </form>
+    </div>
+    <div class="text-secondary small mt-1">Passe esse codigo para quem deve entrar na equipe</div>
+</div>
+{% endif %}
+
+<div class="cartao mb-4">
+    <h6 class="fw-bold">Membros ({{ membros|length }}</h6>
+    {% for m in membros %}
+    <div class="d-flex justify-content-between align-items-center py-1">
+        <span>{{ m.usuario.nomeUsuario }}{% if m.usuario_id == equipe.dono_id %} <span class="badge bg-light text-dark border">criador</span>{% endif %}</span>
+        {% if dono and m.usuario_id != equipe.dono_id %}
+        <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+              onsubmit="return confirm('Remover este membro?');">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
+        </form>
+        {% elif not dono and m.usuario_id == current_user.id %}
+        <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+              onsubmit="return confirm('Sair da equipe?');">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Sair</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% set colunas = [('Pendente', '#0dcaf0'), ('Em andamento', '#ffc107'), ('Concluída', '#198754'), ('Cancelada', '#dc3545')] %}
+<div class="row g-3 mb-5">
+    {% for nome_status, cor in colunas %}
+    {% set lista = tarefas|selectattr('status', 'equalto', nome_status)|list %}
+    <div class="col-12 col-md-6 col-lg-3">
+        <div class="coluna" style="border-top: 4px solid {{ cor }};">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">{{ nome_status }}</h6>
+                <span class="badge rounded-pill bg-light text-dark border">{{ lista|length }}</span>
+            </div>
+
+            {% for tarefa in lista %}
+            <div class="cartao-tarefa">
+                <div class="fw-semibold mb-1">{{ tarefa.titulo }}</div>
+                {% if tarefa.descricao %}
+                <div class="text-secondary small">{{ tarefa.descricao|truncate(70) }}</div>
+                {% endif %}
+                <div class="small mt-2">
+                    <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
+                    {% if tarefa.prazo %}
+                    <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
+                        {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="text-secondary small mt-1">Responsável: {{ tarefa.responsavel.nomeUsuario }}</div>
+
+                {% if pode_mudar_status(tarefa) %}
+                <form method="POST" action="{{ url_for('alterar_status', tarefa_id=tarefa.id) }}" class="mt-2">
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                        {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
+                        <option value="{{ s }}" {% if tarefa.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+                {% endif %}
+
+                {% if pode_editar(tarefa) %}
+                <div class="acoes d-flex gap-2 mt-2">
+                    <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
+                    <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
+                          onsubmit="return confirm('Excluir esta tarefa?');">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class ="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
