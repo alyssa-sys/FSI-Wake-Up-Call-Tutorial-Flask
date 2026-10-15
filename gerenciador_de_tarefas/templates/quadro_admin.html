@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Painel do Administrador - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% set classes = {
+    'Pendente': 'status-pendente',
+    'Em andamento': 'status-andamento',
+    'Concluída': 'status-concluida',
+    'Cancelada': 'status-cancelada'
+} %}
+
+{% macro pessoa(usuario) %}
+    {% if usuario %}
+        <span class="avatar">{{ usuario.nomeUsuario[:1]|upper }}</span>{{ usuario.nomeUsuario }}
+    {% else %}
+        <span class="text-secondary">—</span>
+    {% endif %}
+{% endmacro %}
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-1">Todas as tarefas</h2>
+    <p class="text-secondary mb-0">Visualização do administrador</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md">
+        <div class="stat"><div class="num">{{ tarefas|length }}</div><div class="text-secondary small">Total</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat status-pendente"><div class="num">{{ tarefas|selectattr('status', 'equalto', 'Pendente')|list|length }}</div><div class="text-secondary small">Pendentes</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat status-andamento"><div class="num">{{ tarefas|selectattr('status', 'equalto', 'Em andamento')|list|length }}</div><div class="text-secondary small">Em andamento</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat status-concluida"><div class="num">{{ tarefas|selectattr('status', 'equalto', 'Concluída')|list|length }}</div><div class="text-secondary small">Concluídas</div></div>
+    </div>
+    <div class="col-6 col-md">
+        <div class="stat status-cancelada"><div class="num">{{ tarefas|selectattr('status', 'equalto', 'Cancelada')|list|length }}</div><div class="text-secondary small">Canceladas</div></div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <button type="button" class="filtro ativo" data-filtro="todas">Todas</button>
+    <button type="button" class="filtro" data-filtro="Pendente">Pendente</button>
+    <button type="button" class="filtro" data-filtro="Em andamento">Em andamento</button>
+    <button type="button" class="filtro" data-filtro="Concluída">Concluída</button>
+    <button type="button" class="filtro" data-filtro="Cancelada">Cancelada</button>
+</div>
+
+<div class="cartao" style="padding:1rem;">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr class="text-secondary small text-uppercase">
+                    <th>Título</th>
+                    <th>Descrição</th>
+                    <th>Status</th>
+                    <th>Prazo</th>
+                    <th>Prioridade</th>
+                    <th>Criado por</th>
+                    <th>Responsável</th>
+                    <th class="text-end">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tarefa in tarefas %}
+
+                <tr
+                    data-status="{{ tarefa.status }}"
+                    {% if tarefa_atrasada(tarefa) %}
+                        class="tarefa-atrasada"
+                    {% endif %}
+                >
+
+                    <td class="fw-semibold">
+                        {{ tarefa.titulo }}
+                    </td>
+
+                    <td class="text-secondary small">
+                        {{ (tarefa.descricao or '')|truncate(60) }}
+                    </td>
+
+                    <td>
+                        <span class="selo {{ classes.get(tarefa.status, 'status-pendente') }}">
+                            {{ tarefa.status }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {% if tarefa.prazo %}
+
+                            <span class="{% if tarefa_atrasada(tarefa) %}prazo-atrasado{% endif %}">
+                                {{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') }}
+
+                                {% if tarefa_atrasada(tarefa) %}
+                                    <br>
+                                    <small>Atrasada</small>
+                                {% endif %}
+                            </span>
+
+                        {% else %}
+
+                            <span class="text-secondary">
+                                —
+                            </span>
+
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {{ tarefa.prioridade or 'A definir' }}
+                    </td>
+
+                    <td>
+                        {{ pessoa(tarefa.criador) }}
+                    </td>
+
+                    <td>
+                        {{ pessoa(tarefa.responsavel) }}
+                    </td>
+
+                    <td>
+                        <div class="d-flex justify-content-end align-items-center gap-2">
+
+                            <form
+                                action="{{ url_for('alterar_status', tarefa_id=tarefa.id) }}"
+                                method="POST"
+                            >
+                                <select
+                                    name="status"
+                                    class="form-select form-select-sm"
+                                    onchange="this.form.submit()"
+                                >
+                                    {% for s in classes %}
+                                        <option
+                                            value="{{ s }}"
+                                            {{ 'selected' if s == tarefa.status }}
+                                        >
+                                            {{ s }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+
+                            <a
+                                href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                                class="btn btn-principal btn-sm"
+                            >
+                                Editar
+                            </a>
+
+                            <form
+                                action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
+                                method="POST"
+                                onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');"
+                            >
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-danger btn-sm"
+                                >
+                                    Excluir
+                                </button>
+                            </form>
+
+                        </div>
+                    </td>
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td
+                        colspan="8"
+                        class="text-center text-secondary py-4"
+                    >
+                        Nenhuma tarefa cadastrada.
+                    </td>
+                </tr>
+
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.filtro').forEach(function (botao) {
+        botao.addEventListener('click', function () {
+            document.querySelectorAll('.filtro').forEach(function (b) { b.classList.remove('ativo'); });
+            botao.classList.add('ativo');
+            var filtro = botao.dataset.filtro;
+            document.querySelectorAll('tbody tr[data-status]').forEach(function (linha) {
+                linha.style.display = (filtro === 'todas' || linha.dataset.status === filtro) ? '' : 'none';
+            });
+        });
+    });
+</script>
+
+{% endblock %}
