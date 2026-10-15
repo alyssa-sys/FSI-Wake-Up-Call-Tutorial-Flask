@@ -31,8 +31,89 @@ endblock %} {% block content %}
     <div class="login-form">
       <h3 class="fw-bold mb-1">Bem-vindo de volta!</h3>
       <p class="text-secondary mb-4">Entre para ver suas tarefas</p>
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="mb-3">
+          <label class="form-label" for="identificador"
+            >E-mail ou nome de usuário</label
+          >
+          <div class="campo-icone">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            <input
+              type="text"
+              id="identificador"
+              name="identificador"
+              class="form-control"
+              placeholder="voce@email.com ou seu_usuario"
+              autocomplete="username"
+              required
+              autofocus
+            />
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="senha">Senha</label>
+          <div class="campo-icone">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              class="form-control"
+              placeholder="Sua senha"
+              required
+            />
+            <button type="button" class="ver-senha" id="verSenha">
+              Mostrar
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-principal w-100">Entrar</button>
+      </form>
+
+      <p class="text-center text-secondary mt-4 mb-0">
+        Não tem uma conta?
+        <a
+          href="{{ url_for('registro') }}"
+          class="fw-semibold text-decoration-none"
+          >Registre-se aqui</a
+        >
+      </p>
     </div>
   </div>
 </div>
 
+<script>
+  document.getElementById("verSenha").addEventListener("click", function () {
+    var campo = document.getElementById("senha");
+    var mostrar = campo.type === "password";
+    campo.type = mostrar ? "text" : "password";
+    this.textContent = mostrar ? "Ocultar" : "Mostrar";
+  });
+</script>
 {% endblock %}
