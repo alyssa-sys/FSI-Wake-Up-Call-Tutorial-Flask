@@ -32,6 +32,7 @@
                 data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') if tarefa.prazo else '' }}"
                 data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
                 data-atrasada="{{ 'true' if tarefa_atrasada(tarefa) else 'false' }}"
+                data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
 
                 data-rotulo="{{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}"
                 data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
@@ -70,6 +71,12 @@
                     </div>
                 {% endif %}
 
+                {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
+                    <div class="mt-1">
+                        <span class="badge bg-info-subtle text-dark border">{{ tarefa.categoria.nome }}</span>
+                    </div>
+                {% endif %}
+
                 {% if rotulo == 'de' and tarefa.criador_id != tarefa.responsavel_id %}
                     <div class="text-secondary small mt-1">
                         de: {{ tarefa.criador.nomeUsuario }}
@@ -83,31 +90,46 @@
 
             </div>
 
-            <div class="acoes d-flex gap-2 mt-3">
+            <div class="acoes mt-3">
 
-                <a
-                    href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
-                    class="btn btn-principal"
-                >
-                    {{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}
-                </a>
-
-                {% if pode_excluir(tarefa) %}
-
-                <form
-                    action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
-                    method="POST"
-                    onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');"
-                >
-                    <button
-                        type="submit"
-                        class="btn btn-outline-danger"
-                    >
-                        Excluir
-                    </button>
+                {% if tarefa.criador_id == current_user.id %}
+                <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}" class="mb-2">
+                    <select name="categoria_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Sem categoria</option>
+                        {% for c in categorias %}
+                        <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
                 </form>
-
                 {% endif %}
+
+                <div class="d-flex gap-2">
+
+                    <a
+                        href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                        class="btn btn-principal"
+                    >
+                        {{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}
+                    </a>
+
+                    {% if pode_excluir(tarefa) %}
+
+                    <form
+                        action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
+                        method="POST"
+                        onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');"
+                    >
+                        <button
+                            type="submit"
+                            class="btn btn-outline-danger"
+                        >
+                            Excluir
+                        </button>
+                    </form>
+
+                    {% endif %}
+
+                </div>
 
             </div>
 
@@ -135,6 +157,20 @@
     >
         + Nova tarefa
     </a>
+</div>
+
+{% include '_filtros.html' %}
+
+
+<div class="cartao mb-4">
+    <h6 class="fw-bold mb-3">Resumo das suas tarefas</h6>
+    {% if grafico|sum > 0 %}
+    <div style="position:relative; height:240px;">
+        <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
+    </div>
+    {% else %}
+    <p class="text-secondary small mb-0">Nenhuma tarefa ainda para mostrar no gráfico.</p>
+    {% endif %}
 </div>
 
 
@@ -295,6 +331,20 @@
                 <div class="mb-3">
 
                     <div class="text-secondary small text-uppercase mb-1">
+                        Categoria
+                    </div>
+
+                    <p
+                        id="modalCategoria"
+                        class="mb-0"
+                    ></p>
+
+                </div>
+
+
+                <div class="mb-3">
+
+                    <div class="text-secondary small text-uppercase mb-1">
                         Descrição
                     </div>
 
@@ -388,6 +438,9 @@
             document.getElementById('modalPrioridade').textContent =
                 d.prioridade || 'A definir';
 
+            document.getElementById('modalCategoria').textContent =
+                d.categoria || 'Sem categoria';
+
 
             var status =
                 document.getElementById('modalStatus');
@@ -423,5 +476,30 @@
             editar.textContent = d.rotulo;
         });
 </script>
+
+{% if grafico|sum > 0 %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    var canvas = document.getElementById('graficoStatus');
+    var valores = JSON.parse(canvas.dataset.valores);
+
+    new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'],
+            datasets: [{
+                data: valores,
+                backgroundColor: ['#0dcaf0', '#ffc107', '#198754', '#dc3545'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
+{% endif %}
 
 {% endblock %}
