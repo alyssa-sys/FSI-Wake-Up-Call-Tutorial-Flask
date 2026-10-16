@@ -122,25 +122,35 @@
               </div>
             </div>
           </li>
-          {% if current_user.is_authenticated %} {% if current_user.cargo ==
-          'admin' %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('admin_dashboard') }}"
-              >Painel Admin</a
-            >
-          </li>
-          {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('quadro') }}">Quadro</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('adicionar_tarefa') }}"
-              >Adicionar Tarefa</a
-            >
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-          </li>
+          {% if current_user.is_authenticated %}
+              {% if current_user.cargo == 'admin' %}
+              <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('admin_dashboard') }}"
+              >Painel Admin</a>
+              </li>
+              {% endif %}
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('quadro') }}">Quadro</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('adicionar_tarefa') }}"
+                  >Adicionar Tarefa</a
+                >
+              </li>
+
+          
+              <!-- THUMBNAIL REDONDA DO PERFIL NO LUGAR DO LOGOUT -->
+              <li class="nav-item ms-lg-2 d-flex align-items-center">
+                <a href="{{ url_for('perfil') }}" class="nav-link p-0" title="Meu Perfil">
+                  {% if current_user.foto_perfil and current_user.foto_perfil != 'default.png' %}
+                    <img src="{{ url_for('static', filename='uploads/' + current_user.foto_perfil) }}" alt="Perfil" class="rounded-circle border border-2 border-light" style="width: 38px; height: 38px; object-fit: cover;">
+                  {% else %}
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold border border-2 border-light" style="width: 38px; height: 38px; font-size: 0.9rem;">
+                      {{ current_user.nomeUsuario[:1]|upper }}
+                    </div>
+                  {% endif %}
+                </a>
+              </li>
           {% else %}
           <li class="nav-item">
             <a class="nav-link" href="{{ url_for('login') }}">Login</a>

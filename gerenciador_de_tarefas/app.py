@@ -6,6 +6,16 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import Usuario, Tarefa
+import os
+from werkzeug.utils import secure_filename
+
+# Configuração da pasta de upload de imagens de perfil
+UPLOAD_FOLDER = 'static/uploads'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def arquivo_permitido(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'chaveMuitoMuitoSecreta'
@@ -447,6 +457,43 @@ def excluir_equipe(equipe_id):
     db.session.commit()
     flash('Equipe excluída.', 'success')
     return redirect(url_for('equipes'))
+
+@app.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def perfil():
+    if request.method == 'POST':
+        current_user.nome = request.form.get('nome', '').strip()
+        novo_email = request.form.get('email', '').strip().lower()
+        
+        if novo_email != current_user.email:
+            if Usuario.query.filter_by(email=novo_email).first():
+                flash('Este e-mail já está em uso por outro usuário.', 'danger')
+                return redirect(url_for('perfil'))
+            current_user.email = novo_email
+
+        # Tratamento do arquivo de imagem
+        if 'foto_perfil' in request.files:
+            file = request.files['foto_perfil']
+            if file and file.filename != '':
+                if arquivo_permitido(file.filename):
+                    filename = secure_filename(f"user_{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
+                    
+                    # Garante que a pasta absolute/relative de uploads existe
+                    caminho_pasta = os.path.join(app.root_path, UPLOAD_FOLDER)
+                    os.makedirs(caminho_pasta, exist_ok=True)
+                    
+                    file.save(os.path.join(caminho_pasta, filename))
+                    current_user.foto_perfil = filename
+                else:
+                    flash('Formato de imagem inválido. Use PNG, JPG, JPEG ou GIF.', 'danger')
+                    return redirect(url_for('perfil'))
+
+        db.session.commit()
+        flash('Perfil atualizado com sucesso!', 'success')
+        return redirect(url_for('perfil'))
+
+    return render_template('perfil.html')
+
 
 @app.route('/logout')
 @login_required
