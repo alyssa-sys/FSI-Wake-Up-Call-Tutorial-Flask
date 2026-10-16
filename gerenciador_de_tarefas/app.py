@@ -388,18 +388,38 @@ def remover_membro(equipe_id, usuario_id):
     equipe = db.get_or_404(Equipe, equipe_id)
     sair = usuario_id == current_user.id
     if sair and eh_dono(equipe):
-        flash('O criador não pode sair da própria equipe.', 'danger')
+        flash('O criador não pode sair da própria equipe. Exclua a equipe se quiser encerrá-la.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     if not sair and not eh_dono(equipe):
         flash('Só o criador pode remover membros.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     membro = MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=usuario_id).first_or_404()
-    # tarefas do membro que saiu voltam para o criador
-    Tarefa.query.filter_by(equipe_id=equipe.id, responsavel_id=usuario_id).update({'responsavel_id': equipe.dono_id})
+
+    # tarefas do membro que saiu: as não concluídas viram "Cancelada" e passam para o criador
+    tarefas_do_membro = Tarefa.query.filter_by(equipe_id=equipe.id, responsavel_id=usuario_id).all()
+    for t in tarefas_do_membro:
+        if t.status != 'Concluída':
+            t.status = 'Cancelada'
+        t.responsavel_id = equipe.dono_id
+
     db.session.delete(membro)
     db.session.commit()
-    flash('Pronto.', 'success')
+    flash('Você saiu da equipe.' if sair else 'Membro removido.', 'success')
     return redirect(url_for('equipes') if sair else url_for('ver_equipe', equipe_id=equipe.id))
+
+@app.route('/equipes/<int:equipe_id>/excluir', methods=['POST'])
+@login_required
+def excluir_equipe(equipe_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    if not eh_dono(equipe):
+        flash('Só o criador pode excluir a equipe.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+    Tarefa.query.filter_by(equipe_id=equipe.id).delete()
+    db.session.delete(equipe)  # os membros são apagados junto (cascade)
+    db.session.commit()
+    flash('Equipe excluída.', 'success')
+    return redirect(url_for('equipes'))
 
 @app.route('/logout')
 @login_required
