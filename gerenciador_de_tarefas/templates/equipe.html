@@ -45,13 +45,8 @@
         <span>{{ m.usuario.nomeUsuario }}{% if m.usuario_id == equipe.dono_id %} <span class="badge bg-light text-dark border">criador</span>{% endif %}</span>
         {% if dono and m.usuario_id != equipe.dono_id %}
         <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
-              onsubmit="return confirm('Remover este membro?');">
+              onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
             <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
-        </form>
-        {% elif not dono and m.usuario_id == current_user.id %}
-        <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
-              onsubmit="return confirm('Sair da equipe?');">
-            <button type="submit" class="btn btn-outline-danger btn-sm">Sair</button>
         </form>
         {% endif %}
     </div>

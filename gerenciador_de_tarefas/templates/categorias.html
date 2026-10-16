@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Categorias - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Categorias</h2>
+    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Quadro</a>
+</div>
+
+<div class="cartao mb-4">
+    <h6 class="fw-bold mb-2">Nova categoria</h6>
+    <form method="POST" action="{{ url_for('criar_categoria') }}" class="d-flex gap-2">
+        <input type="text" name="nome" class="form-control" placeholder="Ex.: Faculdade, Trabalho, Casa" maxlength="50" required>
+        <button type="submit" class="btn btn-principal">Criar</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-5">
+    {% for c in categorias %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="cartao h-100">
+            <div class="d-flex justify-content-between align-items-start">
+                <a href="{{ url_for('ver_categoria', categoria_id=c.id) }}" class="text-decoration-none text-reset flex-grow-1">
+                    <div class="fw-bold fs-5">{{ c.nome }}</div>
+                    <div class="text-secondary small">{{ contagem[c.id] }} tarefa{{ '' if contagem[c.id] == 1 else 's' }}</div>
+                </a>
+                <form method="POST" action="{{ url_for('excluir_categoria', categoria_id=c.id) }}"
+                      onsubmit="return confirm('Excluir a categoria? As tarefas ficam sem categoria.');">
+                    <button type="submit" class="btn-close" aria-label="Excluir categoria"></button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-secondary">Você ainda não criou nenhuma categoria.</p>
+    {% endfor %}
+
+    <div class="col-12 col-md-6 col-lg-4">
+        <a href="{{ url_for('quadro', categoria='nenhuma') }}" class="text-decoration-none text-reset">
+            <div class="cartao h-100">
+                <div class="fw-bold fs-5">Sem categoria</div>
+                <div class="text-secondary small">{{ sem_categoria }} tarefa{{ '' if sem_categoria == 1 else 's' }}</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

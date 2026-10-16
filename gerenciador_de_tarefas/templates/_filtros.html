@@ -1,0 +1,63 @@
+<form method="GET" class="cartao mb-4">
+    <div class="row g-2">
+        <div class="col-12 col-md-4">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por título ou descrição"
+                   value="{{ request.args.get('q', '') }}">
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="status" class="form-select">
+                <option value="">Todos os status</option>
+                {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
+                <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="prioridade" class="form-select">
+                <option value="">Toda prioridade</option>
+                {% for p in ['Alta', 'Média', 'Baixa', 'A definir'] %}
+                <option value="{{ p }}" {% if request.args.get('prioridade') == p %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <select name="prazo" class="form-select">
+                <option value="">Qualquer prazo</option>
+                <option value="atrasadas" {% if request.args.get('prazo') == 'atrasadas' %}selected{% endif %}>Atrasadas</option>
+                <option value="hoje" {% if request.args.get('prazo') == 'hoje' %}selected{% endif %}>Vencem hoje</option>
+                <option value="semana" {% if request.args.get('prazo') == 'semana' %}selected{% endif %}>Próximos 7 dias</option>
+                <option value="sem_prazo" {% if request.args.get('prazo') == 'sem_prazo' %}selected{% endif %}>Sem prazo</option>
+            </select>
+        </div>
+
+        {% if pessoas is defined %}
+        <div class="col-6 col-md-2">
+            <select name="responsavel" class="form-select">
+                <option value="">Qualquer pessoa</option>
+                {% for u in pessoas %}
+                <option value="{{ u.id }}" {% if request.args.get('responsavel') == u.id|string %}selected{% endif %}>{{ u.nomeUsuario }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if categorias is defined %}
+        <div class="col-6 col-md-4">
+            <select name="categoria" class="form-select">
+                <option value="">Todas as categorias</option>
+                <option value="nenhuma" {% if request.args.get('categoria') == 'nenhuma' %}selected{% endif %}>Sem categoria</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}" {% if request.args.get('categoria') == c.id|string %}selected{% endif %}>{{ c.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-principal">Filtrar</button>
+            {% if filtrando %}
+            <a href="{{ request.path }}" class="btn btn-outline-secondary" style="border-radius:10px;">Limpar filtros</a>
+            {% endif %}
+        </div>
+    </div>
+</form>

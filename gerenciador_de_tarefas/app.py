@@ -1,11 +1,10 @@
 import secrets
-from models import Usuario, Tarefa, Equipe, MembroEquipe
-from datetime import datetime
+from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import Usuario, Tarefa
 import os
 from werkzeug.utils import secure_filename
 
@@ -63,6 +62,63 @@ def eh_dono(equipe):
 def gerar_codigo():
     return secrets.token_hex(3).upper()
 
+CHAVES_FILTRO = ['q', 'status', 'prioridade', 'prazo', 'responsavel', 'categoria']
+
+def filtro_ativo():
+    return any(request.args.get(k) for k in CHAVES_FILTRO)
+
+def filtrar_tarefas(tarefas):
+    q = request.args.get('q', '').strip().lower()
+    status = request.args.get('status', '')
+    prioridade = request.args.get('prioridade', '')
+    prazo = request.args.get('prazo', '')
+    responsavel = request.args.get('responsavel', '')
+    categoria = request.args.get('categoria', '')
+    agora = datetime.now()
+
+    resultado = []
+    for t in tarefas:
+        if q and q not in (t.titulo or '').lower() and q not in (t.descricao or '').lower():
+            continue
+        if status and t.status != status:
+            continue
+        if prioridade and (t.prioridade or 'A definir') != prioridade:
+            continue
+        if responsavel and str(t.responsavel_id) != responsavel:
+            continue
+        minha_categoria = t.categoria_id if t.criador_id == current_user.id else None
+        if categoria == 'nenhuma':
+            if minha_categoria is not None:
+                continue
+        elif categoria and str(minha_categoria) != categoria:
+            continue
+        if prazo == 'atrasadas' and not tarefa_atrasada(t):
+            continue
+        if prazo == 'hoje' and not (t.prazo and t.prazo.date() == agora.date()):
+            continue
+        if prazo == 'semana' and not (t.prazo and agora <= t.prazo <= agora + timedelta(days=7)):
+            continue
+        if prazo == 'sem_prazo' and t.prazo is not None:
+            continue
+        resultado.append(t)
+    return resultado
+
+def categorias_do_usuario():
+    return Categoria.query.filter_by(usuario_id=current_user.id).order_by(Categoria.nome).all()
+
+def categoria_valida(valor):
+    try:
+        cid = int(valor)
+    except (TypeError, ValueError):
+        return None
+    return cid if cid in {c.id for c in categorias_do_usuario()} else None
+
+def tarefas_individuais():
+    return Tarefa.query.filter(
+        Tarefa.criador_id == current_user.id,
+        Tarefa.responsavel_id == current_user.id,
+        Tarefa.equipe_id.is_(None)
+    ).all()
 
 def contar_status(tarefas_lista):
     contagem = {'Pendente': 0, 'Em andamento': 0, 'Concluída': 0, 'Cancelada': 0}
@@ -70,7 +126,6 @@ def contar_status(tarefas_lista):
         if t.status in contagem:
             contagem[t.status] += 1
     return list(contagem.values())
-
 # ---------------------------------------------------------------
 # Permissões das tarefas
 #   Criador:     vê, edita tudo, muda o status e exclui.
@@ -191,27 +246,22 @@ def adicionar_tarefa():
             flash(str(e), 'danger')
             return redirect(url_for('adicionar_tarefa'))
 
-        try:
-            responsavel_id = int(request.form.get('responsavel_id') or current_user.id)
-        except ValueError:
-            flash('ID do responsável inválido.', 'danger')
-            return redirect(url_for('adicionar_tarefa'))
-        
-        if not db.session.get(Usuario, responsavel_id):
-            flash('Usuário responsável não encontrado.', 'danger')
-            return redirect(url_for('adicionar_tarefa'))
+        responsavel_id = current_user.id
 
-        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status=status, prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id) # type: ignore
+        categoria_id = categoria_valida(request.form.get('categoria_id'))
+
+        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status=status, prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id, categoria_id=categoria_id) # type: ignore
 
         db.session.add(nova_tarefa)
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
+        if categoria_id:
+            return redirect(url_for('ver_categoria', categoria_id=categoria_id))
         return voltar_para_lista()
 
-    usuarios = Usuario.query.filter(Usuario.id != current_user.id).all()
-    return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
-    return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
+    return render_template('adicionar_tarefa.html', categorias=categorias_do_usuario(),
+                           categoria_pre=request.args.get('categoria', type=int), agora=datetime.now())
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
@@ -248,6 +298,9 @@ def editar_tarefa(tarefa_id):
                     flash(str(e), 'danger')
                     return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
 
+            if tarefa.criador_id == current_user.id and not tarefa.equipe_id:
+                tarefa.categoria_id = categoria_valida(request.form.get('categoria_id'))
+
             tarefa.titulo = request.form['titulo'].strip()
             tarefa.descricao = request.form['descricao'].strip()
             tarefa.prioridade = prioridade
@@ -256,7 +309,7 @@ def editar_tarefa(tarefa_id):
         db.session.commit()
         flash('Tarefa atualizada com sucesso!', 'success')
         return voltar_para_lista(tarefa.equipe_id)
-    return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now())
+    return render_template('editar_tarefa.html', tarefa=tarefa, agora=datetime.now(), categorias=categorias_do_usuario())
 
 #alterar apenas o status (usado pelo painel admin)
 @app.route('/alterar_status/<int:tarefa_id>', methods=['POST'])
@@ -298,26 +351,16 @@ def excluir_tarefa(tarefa_id):
 @app.route('/quadro')
 @login_required
 def quadro():
-    recebidas = Tarefa.query.filter(
+    minhas = Tarefa.query.filter(
         Tarefa.responsavel_id == current_user.id,
-        Tarefa.criador_id != current_user.id,
         Tarefa.equipe_id.is_(None)
     ).all()
-    para_mim = Tarefa.query.filter(
-        Tarefa.responsavel_id == current_user.id,
-        Tarefa.criador_id == current_user.id,
-        Tarefa.equipe_id.is_(None)
-    ).all()
-    delegadas = Tarefa.query.filter(
-        Tarefa.criador_id == current_user.id,
-        Tarefa.responsavel_id != current_user.id,
-        Tarefa.equipe_id.is_(None)
-    ).all()
-    atribuidas = recebidas + para_mim
+    tarefas = filtrar_tarefas(minhas)
     return render_template('quadro.html',
-                           atribuidas_a_mim=atribuidas,
-                           delegadas=delegadas,
-                           grafico=contar_status(atribuidas))
+                           tarefas=tarefas,
+                           grafico=contar_status(tarefas),
+                           categorias=categorias_do_usuario(),
+                           filtrando=filtro_ativo())
 
 #rota das equipes
 @app.route('/equipes')
@@ -326,7 +369,7 @@ def equipes():
     minhas = Equipe.query.filter_by(dono_id=current_user.id).all()
     participo = (Equipe.query.join(MembroEquipe, MembroEquipe.equipe_id == Equipe.id)).filter(MembroEquipe.usuario_id == current_user.id, Equipe.dono_id != current_user.id).all()
     return render_template('equipes.html', minhas=minhas, participo=participo)
-
+#criar equipe
 @app.route('/equipes/criar', methods=['POST'])
 @login_required
 def criar_equipe():
@@ -341,7 +384,7 @@ def criar_equipe():
     db.session.commit()
     flash('Equipe criada!', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
-
+#entrar equipe
 @app.route('/equipes/entrar', methods=['POST'])
 @login_required
 def entrar_equipe():
@@ -357,7 +400,7 @@ def entrar_equipe():
     db.session.commit()
     flash(f'Você entrou na equipe "{equipe.nome}".', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
-
+#ver equipe
 @app.route('/equipes/<int:equipe_id>')
 @login_required
 def ver_equipe(equipe_id):
@@ -365,11 +408,13 @@ def ver_equipe(equipe_id):
     if not eh_membro(equipe):
         flash('Você não faz parte dessa equipe.', 'danger')
         return redirect(url_for('equipes'))
-    tarefas = Tarefa.query.filter_by(equipe_id=equipe.id).all()
+    tarefas = filtrar_tarefas(Tarefa.query.filter_by(equipe_id=equipe.id).all())
     return render_template('equipe.html', equipe=equipe, tarefas=tarefas,
                            membros=equipe.membros, dono=eh_dono(equipe),
-                           grafico=contar_status(tarefas))
-
+                           grafico=contar_status(tarefas),
+                           pessoas=[m.usuario for m in equipe.membros],
+                           filtrando=filtro_ativo())
+#adicionar tarefa equipe
 @app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])
 @login_required
 def adicionar_tarefa_equipe(equipe_id):
@@ -406,7 +451,7 @@ def adicionar_tarefa_equipe(equipe_id):
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
     return render_template('adicionar_tarefa_equipe.html', equipe=equipe, membros=membros, agora=datetime.now())
-
+#gerar codigo da equipe
 @app.route('/equipes/<int:equipe_id>/novo_codigo', methods=['POST'])
 @login_required
 def novo_codigo_equipe(equipe_id):
@@ -418,7 +463,7 @@ def novo_codigo_equipe(equipe_id):
     db.session.commit()
     flash('Novo código gerado. O anterior não vale mais.', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
-
+#remover usuario da equipe
 @app.route('/equipes/<int:equipe_id>/remover/<int:usuario_id>', methods=['POST'])
 @login_required
 def remover_membro(equipe_id, usuario_id):
@@ -443,7 +488,7 @@ def remover_membro(equipe_id, usuario_id):
     db.session.commit()
     flash('Você saiu da equipe.' if sair else 'Membro removido.', 'success')
     return redirect(url_for('equipes') if sair else url_for('ver_equipe', equipe_id=equipe.id))
-
+#excluir equipe
 @app.route('/equipes/<int:equipe_id>/excluir', methods=['POST'])
 @login_required
 def excluir_equipe(equipe_id):
@@ -493,6 +538,96 @@ def perfil():
         return redirect(url_for('perfil'))
 
     return render_template('perfil.html')
+
+#criar categoria
+@app.route('/categorias/criar', methods=['POST'])
+@login_required
+def criar_categoria():
+    nome = request.form.get('nome', '').strip()[:50]
+    if not nome:
+        flash('Dê um nome para a categoria.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    if any(c.nome.lower() == nome.lower() for c in categorias_do_usuario()):
+        flash('Você já tem uma categoria com esse nome.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    db.session.add(Categoria(nome=nome, usuario_id=current_user.id))  # type: ignore
+    db.session.commit()
+    flash('Categoria criada.', 'success')
+    return redirect(url_for('ver_categorias'))
+
+#excluir categoria
+@app.route('/categorias/<int:categoria_id>/excluir', methods=['POST'])
+@login_required
+def excluir_categoria(categoria_id):
+    categoria = db.get_or_404(Categoria, categoria_id)
+    if categoria.usuario_id != current_user.id:
+        flash('Você não pode excluir esta categoria.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    Tarefa.query.filter_by(categoria_id=categoria.id).update({'categoria_id': None})
+    db.session.delete(categoria)
+    db.session.commit()
+    flash('Categoria excluída. As tarefas ficaram sem categoria.', 'success')
+    return redirect(url_for('ver_categorias'))
+
+#definir categoria
+@app.route('/tarefas/<int:tarefa_id>/categoria', methods=['POST'])
+@login_required
+def definir_categoria(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+    if tarefa.criador_id != current_user.id or tarefa.equipe_id:
+        flash('Você só pode categorizar as tarefas individuais que você criou.', 'danger')
+        return redirect(url_for('quadro'))
+    tarefa.categoria_id = categoria_valida(request.form.get('categoria_id'))
+    db.session.commit()
+    return redirect(request.referrer or url_for('quadro'))
+
+#ver categorias
+@app.route('/categorias')
+@login_required
+def ver_categorias():
+    todas = categorias_do_usuario()
+    contagem = {c.id: 0 for c in todas}
+    sem_categoria = 0
+    for t in tarefas_individuais():
+        if t.categoria_id in contagem:
+            contagem[t.categoria_id] += 1
+        else:
+            sem_categoria += 1
+    return render_template('categorias.html', categorias=todas,
+                           contagem=contagem, sem_categoria=sem_categoria)
+
+#ver categoria
+@app.route('/categorias/<int:categoria_id>')
+@login_required
+def ver_categoria(categoria_id):
+    categoria = db.get_or_404(Categoria, categoria_id)
+    if categoria.usuario_id != current_user.id:
+        flash('Essa categoria não é sua.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    todas = tarefas_individuais()
+    dentro = [t for t in todas if t.categoria_id == categoria.id]
+    disponiveis = [t for t in todas if t.categoria_id != categoria.id]
+    return render_template('categoria.html', categoria=categoria,
+                           tarefas=dentro, disponiveis=disponiveis)
+
+#adicionar a uma categoria
+@app.route('/categorias/<int:categoria_id>/adicionar', methods=['POST'])
+@login_required
+def adicionar_a_categoria(categoria_id):
+    categoria = db.get_or_404(Categoria, categoria_id)
+    if categoria.usuario_id != current_user.id:
+        flash('Essa categoria não é sua.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    permitidas = {t.id: t for t in tarefas_individuais()}
+    adicionadas = 0
+    for tid in request.form.getlist('tarefa_ids', type=int):
+        if tid in permitidas:
+            permitidas[tid].categoria_id = categoria.id
+            adicionadas += 1
+    db.session.commit()
+    flash(f'{adicionadas} tarefa(s) adicionada(s) à categoria.' if adicionadas else 'Nenhuma tarefa selecionada.',
+          'success' if adicionadas else 'info')
+    return redirect(url_for('ver_categoria', categoria_id=categoria.id))
 
 
 @app.route('/logout')

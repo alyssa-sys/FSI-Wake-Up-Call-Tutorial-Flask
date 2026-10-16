@@ -27,6 +27,7 @@ class Tarefa(db.Model):
     criador_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=True)
+    categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=True)
 
 class Equipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,3 +44,9 @@ class MembroEquipe(db.Model):
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     usuario = db.relationship('Usuario')
     __table_args__ = (db.UniqueConstraint('equipe_id', 'usuario_id'),)
+
+class Categoria(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(50), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    tarefas = db.relationship('Tarefa', backref='categoria', lazy=True)

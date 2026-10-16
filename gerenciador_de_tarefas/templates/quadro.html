@@ -8,7 +8,7 @@
 </div>
 
 {% include '_filtros.html' %}
-{% include '_categorias.html' %}
+
 
 <div class="cartao mb-4">
     <h6 class="fw-bold mb-3">Resumo das suas tarefas</h6>
@@ -50,7 +50,7 @@
                     {% endif %}
                     <div class="small mt-2">
                         <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
-                        {% if tarefa.categoria %}<span class="badge bg-info-subtle text-dark border">{{ tarefa.categoria.nome }}</span>{% endif %}
+                        {% if tarefa.categoria and tarefa.criador_id == current_user.id %}<span class="badge bg-info-subtle text-dark border">{{ tarefa.categoria.nome }}</span>{% endif %}
                         {% if tarefa.prazo %}
                             <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
                                 {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
@@ -59,14 +59,16 @@
                     </div>
                 </div>
                 <div class="acoes mt-3">
-                    <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}" class="mb-2">
-                        <select name="categoria_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="">Sem categoria</option>
-                            {% for c in categorias %}
-                            <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
-                            {% endfor %}
-                        </select>
+                    {% if tarefa.criador_id == current_user.id %}
+                    <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
+                      <select name="categoria_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Sem categoria</option>
+                        {% for c in categorias %}
+                        <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                      </select>
                     </form>
+                    {% endif %}
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
