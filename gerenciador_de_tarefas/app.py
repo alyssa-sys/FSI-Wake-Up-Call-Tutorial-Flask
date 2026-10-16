@@ -44,6 +44,23 @@ def tarefa_atrasada(tarefa):
     return tarefa.prazo < datetime.now()
 
 
+def eh_membro(equipe):
+    return any(m.usuario_id == current_user.id for m in equipe.membros)
+
+def eh_dono(equipe):
+    return equipe.dono_id == current_user.id
+
+def gerar_codigo():
+    return secrets.token_hex(3).upper()
+
+
+def contar_status(tarefas_lista):
+    contagem = {'Pendente': 0, 'Em andamento': 0, 'Concluída': 0, 'Cancelada': 0}
+    for t in tarefas_lista:
+        if t.status in contagem:
+            contagem[t.status] += 1
+    return list(contagem.values())
+
 # ---------------------------------------------------------------
 # Permissões das tarefas
 #   Criador:     vê, edita tudo, muda o status e exclui.
@@ -76,23 +93,7 @@ app.jinja_env.globals.update(
     tarefa_atrasada=tarefa_atrasada,
 )
 
-<<<<<<< HEAD
-=======
-def eh_membro(equipe):
-    return MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=current_user.id).first() is not None
 
-def eh_dono(equipe):
-    return current_user.id == equipe.dono_id
-
-def gerar_codigo():
-    while True:
-        codigo = secrets.token_hex(4).upper()
-        if not Equipe.query.filter_by(codigo_acesso=codigo).first():
-            return codigo
-
-def contar_status(tarefas):
-    return [sum(1 for t in tarefas if t.status == s) for s in STATUS_VALIDOS]
->>>>>>> origin/criar-equipe
 
 @app.route('/')
 def home():
