@@ -67,10 +67,18 @@ cor_badge) %}
 {% endmacro %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
+<<<<<<< HEAD
   <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
   <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal"
     >+ Nova tarefa</a
   >
+=======
+    <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Equipes</a>
+        <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal">+ Nova tarefa</a>
+    </div>
+>>>>>>> origin/criar-equipe
 </div>
 
 <h5 class="fw-semibold mb-3">Suas tarefas</h5>
@@ -82,6 +90,17 @@ cor_badge) %}
   atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list, '#198754',
   'bg-success') }} {{ coluna('Cancelada', atribuidas_a_mim|selectattr('status',
   'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+</div>
+
+<div class="cartao mb-4">
+    <h6 class="fw-bold mb-3">Resumo das suas tarefas</h6>
+    {% if grafico|sum > 0 %}
+    <div style="position:relative; height:240px;">
+        <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
+    </div>
+    {% else %}
+    <p class="text-secondary small mb-0">Nenhuma tarefa ainda para mostrar no gráfico.</p>
+    {% endif %}
 </div>
 
 <h5 class="fw-semibold mt-5 mb-3">Compartilhadas com você</h5>
@@ -164,4 +183,33 @@ cor_badge) %}
     });
 </script>
 
+<<<<<<< HEAD
 {% endblock %}
+=======
+{% if grafico|sum > 0 %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    var canvas = document.getElementById('graficoStatus');
+    var valores = JSON.parse(canvas.dataset.valores);
+
+    new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'],
+            datasets: [{
+                data: valores,
+                backgroundColor: ['#0dcaf0', '#ffc107', '#198754', '#dc3545'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
+{% endif %}
+
+{% endblock %}
+>>>>>>> origin/criar-equipe

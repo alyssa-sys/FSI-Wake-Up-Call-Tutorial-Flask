@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Atribuir Tarefa - {{ equipe.nome }}{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="cartao">
+            <div class="mb-4">
+                <h2 class="'fw-bold mb-1">Atribuir Tarefa</h2>
+                <p class="text-secondary mb-0">Equipe {{ equipe.nome }}</p>
+            </div>
+
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="'form-label" for="titulo">Titulo</label>
+                    <input type="text" id="titulo" name="titulo" class="form-control" maxlength="150" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="descricao">Descrição</label>
+                    <textarea id="descricao" name="descricao" class="form-control" rows="4" required></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="responsavel_id">Responsável</label>
+                    <select id="responsavel_id" name="responsavel_id" class="form-select" required>
+                        <option value="" selected disabled>Escolha um membro</option>
+                        {% for u in membros %}
+                        <option value="{{ u.id }}">{{ u.nomeUsuario }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label" for="prioridade">Prioridade</label>
+                        <select id="prioridade" name="prioridade" class="form-select">
+                            <option value="A definir" selected>A definir</option>
+                            <option value="Baixa">Baixa</option>
+                            <option value="Média">Média</option>
+                            <option value="Alta">Alta</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="prazo">Prazo</label>
+                        <input type="datetime-local" id="prazo" name="prazo" class="form-control" min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}">
+                        <div class="form-text">Deixe vazio se não houver prazo</div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('ver_equipe', equipe_id=equipe.id) }}" class="btn btn-outline-secondary w-50"
+                       style="border-radius:10px; padding:.7rem 1rem;">Cancelar</a>
+                    <button type="submit" class="btn btn-principal w-50">Atribuir</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
