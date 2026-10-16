@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ categoria.nome }} - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% set cores = {'Pendente': 'bg-info text-dark', 'Em andamento': 'bg-warning text-dark', 'Concluída': 'bg-success', 'Cancelada': 'bg-danger'} %}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="fw-bold mb-0">{{ categoria.nome }}</h2>
+        <div class="text-secondary small">{{ tarefas|length }} tarefa{{ '' if tarefas|length == 1 else 's' }}</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Categorias</a>
+        <a href="{{ url_for('adicionar_tarefa', categoria=categoria.id) }}" class="btn btn-principal">+ Nova tarefa aqui</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    {% for tarefa in tarefas %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="cartao-tarefa h-100">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="fw-semibold">{{ tarefa.titulo }}</div>
+                <span class="badge rounded-pill {{ cores[tarefa.status] }}">{{ tarefa.status }}</span>
+            </div>
+            {% if tarefa.descricao %}
+            <div class="text-secondary small mt-1">{{ tarefa.descricao|truncate(80) }}</div>
+            {% endif %}
+            <div class="small mt-2">
+                <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
+                {% if tarefa.prazo %}
+                <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
+                    {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
+                </span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
+                <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
+                    <input type="hidden" name="categoria_id" value="">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-secondary">Nenhuma tarefa nesta categoria ainda. Adicione abaixo ou crie uma nova.</p>
+    {% endfor %}
+</div>
+
+<div class="cartao mb-5">
+    <h6 class="fw-bold mb-3">Adicionar tarefas existentes</h6>
+    {% if disponiveis %}
+    <form method="POST" action="{{ url_for('adicionar_a_categoria', categoria_id=categoria.id) }}">
+        {% for t in disponiveis %}
+        <div class="form-check mb-1">
+            <input class="form-check-input" type="checkbox" name="tarefa_ids" value="{{ t.id }}" id="t{{ t.id }}">
+            <label class="form-check-label" for="t{{ t.id }}">
+                {{ t.titulo }}
+                {% if t.categoria %}<span class="text-secondary small">(em {{ t.categoria.nome }})</span>{% endif %}
+            </label>
+        </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-principal mt-3">Adicionar à categoria</button>
+    </form>
+    {% else %}
+    <p class="text-secondary small mb-0">Todas as suas tarefas individuais já estão nesta categoria.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -15,130 +15,70 @@
             <form method="POST">
                 <div class="mb-3">
                     <label class="form-label" for="titulo">Título</label>
-                    <input type="text" id="titulo" name="titulo" class="form-control" value="{{ tarefa.titulo }}" maxlength="150" required 
+                    <input type="text" id="titulo" name="titulo" class="form-control" value="{{ tarefa.titulo }}" maxlength="150" required
                     {% if pode_editar(tarefa) %}autofocus{% else %}readonly{% endif %}
                     >
                 </div>
-                <div class="mb-3">
-                    <label class="form-label" for="descricao">
-                        Descrição
-                    </label>
 
-                    <textarea
-                        id="descricao"
-                        name="descricao"
-                        class="form-control"
-                        rows="4"
-                        required
-                        {% if not pode_editar(tarefa) %}
-                            readonly
-                        {% endif %}
+                <div class="mb-3">
+                    <label class="form-label" for="descricao">Descrição</label>
+                    <textarea id="descricao" name="descricao" class="form-control" rows="4" required
+                        {% if not pode_editar(tarefa) %}readonly{% endif %}
                     >{{ tarefa.descricao }}</textarea>
                 </div>
 
+                {% if tarefa.criador_id == current_user.id and not tarefa.equipe_id %}
+                <div class="mb-3">
+                    <label class="form-label" for="categoria_id">Categoria</label>
+                    <select id="categoria_id" name="categoria_id" class="form-select">
+                        <option value="">Sem categoria</option>
+                        {% for c in categorias %}
+                        <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
                 <div class="row g-3 mb-3">
-
                     <div class="col-md-6">
-                        <label class="form-label" for="prioridade">
-                            Prioridade
-                        </label>
-
-                        <select
-                            id="prioridade"
-                            name="prioridade"
-                            class="form-select"
-                            {% if not pode_editar(tarefa) %}
-                                disabled
-                            {% endif %}
+                        <label class="form-label" for="prioridade">Prioridade</label>
+                        <select id="prioridade" name="prioridade" class="form-select"
+                            {% if not pode_editar(tarefa) %}disabled{% endif %}
                         >
                             {% for prioridade in ['A definir', 'Baixa', 'Média', 'Alta'] %}
-                                <option
-                                    value="{{ prioridade }}"
-                                    {% if tarefa.prioridade == prioridade %}
-                                        selected
-                                    {% endif %}
-                                >
-                                    {{ prioridade }}
-                                </option>
+                            <option value="{{ prioridade }}" {% if (tarefa.prioridade or 'A definir') == prioridade %}selected{% endif %}>{{ prioridade }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label" for="prazo">
-                            Prazo
-                        </label>
-
-                        <input
-                            type="datetime-local"
-                            id="prazo"
-                            name="prazo"
-                            class="form-control"
+                        <label class="form-label" for="prazo">Prazo</label>
+                        <input type="datetime-local" id="prazo" name="prazo" class="form-control"
                             value="{{ tarefa.prazo.strftime('%Y-%m-%dT%H:%M') if tarefa.prazo else '' }}"
-                            min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}"
-                            {% if not pode_editar(tarefa) %}
-                                readonly
-                            {% endif %}
+                            {% if not tarefa.prazo or tarefa.prazo > agora %}min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}"{% endif %}
+                            {% if not pode_editar(tarefa) %}readonly{% endif %}
                         >
-
                         {% if pode_editar(tarefa) %}
-                            <div class="form-text">
-                                Deixe vazio para remover o prazo.
-                            </div>
+                        <div class="form-text">Deixe vazio para remover o prazo.</div>
                         {% else %}
-                            <div class="form-text">
-                                Apenas o criador ou administrador pode alterar.
-                            </div>
+                        <div class="form-text">Apenas o criador ou administrador pode alterar.</div>
                         {% endif %}
                     </div>
-
                 </div>
+
                 <div class="mb-4">
-                    <label class="form-label" for="status">
-                        Status
-                    </label>
-
-                    <select
-                        id="status"
-                        name="status"
-                        class="form-select"
-                    >
-                        <option value="Pendente"
-                            {% if tarefa.status == 'Pendente' %}selected{% endif %}>
-                            Pendente
-                        </option>
-
-                        <option value="Em andamento"
-                            {% if tarefa.status == 'Em andamento' %}selected{% endif %}>
-                            Em andamento
-                        </option>
-
-                        <option value="Concluída"
-                            {% if tarefa.status == 'Concluída' %}selected{% endif %}>
-                            Concluída
-                        </option>
-
-                        <option value="Cancelada"
-                            {% if tarefa.status == 'Cancelada' %}selected{% endif %}>
-                            Cancelada
-                        </option>
+                    <label class="form-label" for="status">Status</label>
+                    <select id="status" name="status" class="form-select">
+                        {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
+                        <option value="{{ s }}" {% if tarefa.status == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="d-flex gap-2">
-                    <a
-                        href="{{ url_for('admin_dashboard') if eh_admin() else url_for('quadro') }}"
-                        class="btn btn-outline-secondary w-50"
-                        style="border-radius:10px; padding:.7rem 1rem;"
-                    >
-                        Cancelar
-                    </a>
 
-                    <button
-                        type="submit"
-                        class="btn btn-principal w-50"
-                    >
-                        Salvar
-                    </button>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('ver_equipe', equipe_id=tarefa.equipe_id) if tarefa.equipe_id else (url_for('admin_dashboard') if eh_admin() else url_for('quadro')) }}"
+                       class="btn btn-outline-secondary w-50" style="border-radius:10px; padding:.7rem 1rem;">Cancelar</a>
+                    <button type="submit" class="btn btn-principal w-50">Salvar</button>
                 </div>
             </form>
         </div>
