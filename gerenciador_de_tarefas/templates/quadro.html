@@ -24,6 +24,14 @@
                 {% if tarefa.descricao %}
                     <div class="text-secondary small">{{ tarefa.descricao|truncate(70) }}</div>
                 {% endif %}
+                <div class="small mt-2">
+                    <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
+                    {% if tarefa.prazo %}
+                        <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
+                            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
+                        </span>
+                    {% endif %}
+                </div>
             </div>
             <div class="acoes d-flex gap-2 mt-3">
                 <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
@@ -47,18 +55,18 @@
 
 <h5 class="fw-semibold mb-3">Suas tarefas</h5>
 <div class="row g-3">
-    {{ coluna('Pendente', minhas_tarefas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', minhas_tarefas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', minhas_tarefas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', minhas_tarefas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+    {{ coluna('Pendente', atribuidas_a_mim|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
+    {{ coluna('Em andamento', atribuidas_a_mim|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
+    {{ coluna('Concluída', atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
+    {{ coluna('Cancelada', atribuidas_a_mim|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
 </div>
 
 <h5 class="fw-semibold mt-5 mb-3">Compartilhadas com você</h5>
 <div class="row g-3 mb-5">
-    {{ coluna('Pendente', tarefas_compartilhadas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', tarefas_compartilhadas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', tarefas_compartilhadas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', tarefas_compartilhadas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+    {{ coluna('Pendente', delegadas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
+    {{ coluna('Em andamento', delegadas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
+    {{ coluna('Concluída', delegadas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
+    {{ coluna('Cancelada', delegadas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
 </div>
 
 <!-- Janela de detalhes (somente leitura) -->

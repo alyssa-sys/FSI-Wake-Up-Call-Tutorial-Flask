@@ -24,13 +24,14 @@
                     <label class="form-label" for="responsavel_id">Responsável</label>
                     <select id="responsavel_id" name="responsavel_id" class="form-select">
                         <option value="" selected disabled hidden>Atribuir a outra pessoa?</option>
+                        <option value="">Eu mesmo</option>
                         {% for usuario in usuarios %}
-                            <option value="">Eu mesmo</option>
+                            <option value="{{ usuario.id }}">{{ usuario.nomeUsuario }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="row g-3 mb-4">
-                    <div class="col=md-6">
+                    <div class="col-md-6">
                         <label class="form-label" for="prioridade">Prioridade</label>
                         <select id="prioridade" name="prioridade" class="form-select">
                             <option value="A definir" selected>A definir</option>
@@ -41,7 +42,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="prazo">Prazo</label>
-                        <input type="datetime-local" id="prazo" name="prazo" class="form-control" min="{{ agora.strftime('%Y-%m-%dT%H:%M')}}">
+                        <input type="datetime-local" id="prazo" name="prazo" class="form-control" min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}">
                         <div class="form-text">Deixe vazio se não houver prazo</div>
                     </div>
                 </div>

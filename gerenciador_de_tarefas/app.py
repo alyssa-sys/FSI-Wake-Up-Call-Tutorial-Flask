@@ -127,6 +127,7 @@ def login():
 @login_required
 def admin_dashboard():
     if not eh_admin():
+    if not eh_admin():
         flash("Acesso negado!", 'danger')
         return redirect(url_for('quadro'))
 
@@ -141,6 +142,8 @@ PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
 @login_required
 def adicionar_tarefa():
     if request.method == 'POST':
+        titulo = request.form['titulo'].strip()
+        descricao = request.form['descricao'].strip()
         titulo = request.form['titulo'].strip()
         descricao = request.form['descricao'].strip()
         status = 'Pendente'
@@ -177,6 +180,7 @@ def adicionar_tarefa():
 
     usuarios = Usuario.query.filter(Usuario.id != current_user.id).all()
     return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
+    return render_template('adicionar_tarefa.html', usuarios=usuarios, agora=datetime.now())
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
@@ -187,7 +191,7 @@ def editar_tarefa(tarefa_id):
     if not pode_mudar_status(tarefa):
         flash('Você não tem permissão para editar esta tarefa.', 'danger')
         return voltar_para_lista()
-    
+
     if request.method == 'POST':
         status = request.form['status']
         if status not in STATUS_VALIDOS:
@@ -196,7 +200,7 @@ def editar_tarefa(tarefa_id):
 
         tarefa.status = status
 
-        # só criador e admin alteram título e descrição
+        # só criador e admin alteram título, descrição, prioridade e prazo
         if pode_editar(tarefa):
             prioridade = request.form.get('prioridade', tarefa.prioridade or 'A definir')
             if prioridade not in PRIORIDADES_VALIDAS:
@@ -205,8 +209,14 @@ def editar_tarefa(tarefa_id):
             try:
                 prazo = validar_prazo(request.form.get('prazo'))
             except ValueError as e:
-                flash(str(e), 'danger')
-                return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+                prazo_enviado = request.form.get('prazo', '').strip()
+                prazo_atual = tarefa.prazo.strftime('%Y-%m-%dT%H:%M') if tarefa.prazo else None
+                if prazo_atual and prazo_enviado == prazo_atual:
+                    prazo = tarefa.prazo  # não mudou, mantém mesmo vencido
+                else:
+                    flash(str(e), 'danger')
+                    return redirect(url_for('editar_tarefa', tarefa_id=tarefa_id))
+
             tarefa.titulo = request.form['titulo'].strip()
             tarefa.descricao = request.form['descricao'].strip()
             tarefa.prioridade = prioridade
