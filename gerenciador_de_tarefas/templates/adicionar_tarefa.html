@@ -1,59 +1,87 @@
-{% extends "base.html" %}
-{% block title %}Adicionar Tarefa - Gerenciador de Tarefas{% endblock %}
-{% block content %}
+{% extends "base.html" %} {% block title %}Adicionar Tarefa - Gerenciador de
+Tarefas{% endblock %} {% block content %}
 
 <div class="row justify-content-center mt-4">
-    <div class="col-12 col-md-8 col-lg-6">
-        <div class="cartao">
-            <div class="mb-4">
-                <h2 class="fw-bold mb-1">Adicionar Tarefa</h2>
-                <p class="text-secondary mb-0">Preencha os dados da nova tarefa</p>
-            </div>
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="cartao">
+      <div class="mb-4">
+        <h2 class="fw-bold mb-1">Adicionar Tarefa</h2>
+        <p class="text-secondary mb-0">Preencha os dados da nova tarefa</p>
+      </div>
 
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label" for="titulo">Título</label>
-                    <input type="text" id="titulo" name="titulo" class="form-control" placeholder="Ex.: Entregar seminário" maxlength="150" required autofocus>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="descricao">Descrição</label>
-                    <textarea id="descricao" name="descricao" class="form-control" rows="4"
-                              placeholder="Descreva o que precisa ser feito" required></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="responsavel_id">Responsável</label>
-                    <select id="responsavel_id" name="responsavel_id" class="form-select">
-                        <option value="" selected disabled hidden>Atribuir a outra pessoa?</option>
-                        <option value="">Eu mesmo</option>
-                        {% for usuario in usuarios %}
-                            <option value="{{ usuario.id }}">{{ usuario.nomeUsuario }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label" for="prioridade">Prioridade</label>
-                        <select id="prioridade" name="prioridade" class="form-select">
-                            <option value="A definir" selected>A definir</option>
-                            <option value="Baixa">Baixa</option>
-                            <option value="Média">Média</option>
-                            <option value="Alta">Alta</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="prazo">Prazo</label>
-                        <input type="datetime-local" id="prazo" name="prazo" class="form-control" min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}">
-                        <div class="form-text">Deixe vazio se não houver prazo</div>
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary w-50"
-                       style="border-radius:10px; padding:.7rem 1rem;">Cancelar</a>
-                    <button type="submit" class="btn btn-principal w-50">Adicionar</button>
-                </div>
-            </form>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label" for="titulo">Título</label>
+          <input
+            type="text"
+            id="titulo"
+            name="titulo"
+            class="form-control"
+            placeholder="Ex.: Entregar seminário"
+            maxlength="150"
+            required
+            autofocus
+          />
         </div>
+        <div class="mb-3">
+          <label class="form-label" for="descricao">Descrição</label>
+          <textarea
+            id="descricao"
+            name="descricao"
+            class="form-control"
+            rows="4"
+            placeholder="Descreva o que precisa ser feito"
+            required
+          ></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="responsavel_id">Responsável</label>
+          <select id="responsavel_id" name="responsavel_id" class="form-select">
+            <option value="" selected disabled hidden>
+              Atribuir a outra pessoa?
+            </option>
+            <option value="">Eu mesmo</option>
+            {% for usuario in usuarios %}
+            <option value="{{ usuario.id }}">{{ usuario.nomeUsuario }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label" for="prioridade">Prioridade</label>
+            <select id="prioridade" name="prioridade" class="form-select">
+              <option value="A definir" selected>A definir</option>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="prazo">Prazo</label>
+            <input
+              type="datetime-local"
+              id="prazo"
+              name="prazo"
+              class="form-control"
+              min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}"
+            />
+            <div class="form-text">Deixe vazio se não houver prazo</div>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <a
+            href="{{ url_for('quadro') }}"
+            class="btn btn-outline-secondary w-50"
+            style="border-radius: 10px; padding: 0.7rem 1rem"
+            >Cancelar</a
+          >
+          <button type="submit" class="btn btn-principal w-50">
+            Adicionar
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
 {% endblock %}

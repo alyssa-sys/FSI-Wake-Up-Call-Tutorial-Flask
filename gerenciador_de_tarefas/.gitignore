@@ -3,4 +3,4 @@
 *.pyc
 *__pycache__/*
 *.db
-.vscode/*
+.vscode/*__pycache__/

@@ -1,121 +1,168 @@
-{% extends "base.html" %}
-{% block title %}Quadro - Gerenciador de Tarefas{% endblock %}
-{% block content %}
-
-{% macro coluna(titulo, lista, cor_borda, cor_badge) %}
+{% extends "base.html" %} {% block title %}Quadro - Gerenciador de Tarefas{%
+endblock %} {% block content %} {% macro coluna(titulo, lista, cor_borda,
+cor_badge) %}
 <div class="col-12 col-md-6 col-lg-3">
-    <div class="coluna" style="border-top: 4px solid {{ cor_borda }};">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">{{ titulo }}</h6>
-            <span class="badge rounded-pill bg-light text-dark border">{{ lista|length }}</span>
-        </div>
-
-        {% for tarefa in lista %}
-        <div class="cartao-tarefa">
-            <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
-                 data-titulo="{{ tarefa.titulo }}"
-                 data-descricao="{{ tarefa.descricao or '' }}"
-                 data-status="{{ tarefa.status }}"
-                 data-cor="{{ cor_badge }}"
-                 data-criado="{{ tarefa.criador.nomeUsuario if tarefa.criador else '' }}"
-                 data-compartilhado="{{ tarefa.responsavel.nomeUsuario if tarefa.responsavel else '' }}"
-                 data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
-                <div class="fw-semibold mb-1">{{ tarefa.titulo }}</div>
-                {% if tarefa.descricao %}
-                    <div class="text-secondary small">{{ tarefa.descricao|truncate(70) }}</div>
-                {% endif %}
-                <div class="small mt-2">
-                    <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
-                    {% if tarefa.prazo %}
-                        <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
-                            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
-                        </span>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="acoes d-flex gap-2 mt-3">
-                <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
-                <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
-                      onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
-                    <button type="submit" class="btn btn-outline-danger">Excluir</button>
-                </form>
-            </div>
-        </div>
-        {% else %}
-            <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
-        {% endfor %}
+  <div class="coluna" style="border-top: 4px solid {{ cor_borda }};">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="fw-bold mb-0">{{ titulo }}</h6>
+      <span class="badge rounded-pill bg-light text-dark border"
+        >{{ lista|length }}</span
+      >
     </div>
+
+    {% for tarefa in lista %}
+    <div class="cartao-tarefa">
+      <div
+        class="area-clique"
+        data-bs-toggle="modal"
+        data-bs-target="#modalTarefa"
+        data-titulo="{{ tarefa.titulo }}"
+        data-descricao="{{ tarefa.descricao or '' }}"
+        data-status="{{ tarefa.status }}"
+        data-cor="{{ cor_badge }}"
+        data-criado="{{ tarefa.criador.nomeUsuario if tarefa.criador else '' }}"
+        data-compartilhado="{{ tarefa.responsavel.nomeUsuario if tarefa.responsavel else '' }}"
+        data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+      >
+        <div class="fw-semibold mb-1">{{ tarefa.titulo }}</div>
+        {% if tarefa.descricao %}
+        <div class="text-secondary small">
+          {{ tarefa.descricao|truncate(70) }}
+        </div>
+        {% endif %}
+        <div class="small mt-2">
+          <span class="badge bg-light text-dark border"
+            >{{ tarefa.prioridade or 'A definir' }}</span
+          >
+          {% if tarefa.prazo %}
+          <span
+            class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}"
+          >
+            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if
+            tarefa_atrasada(tarefa) %} (atrasada){% endif %}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="acoes d-flex gap-2 mt-3">
+        <a
+          href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+          class="btn btn-principal"
+          >Editar</a
+        >
+        <form
+          action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
+          method="POST"
+          onsubmit="
+            return confirm('Tem certeza que deseja excluir esta tarefa?');
+          "
+        >
+          <button type="submit" class="btn btn-outline-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
+    {% endfor %}
+  </div>
 </div>
 {% endmacro %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
-    <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal">+ Nova tarefa</a>
+  <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
+  <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal"
+    >+ Nova tarefa</a
+  >
 </div>
 
 <h5 class="fw-semibold mb-3">Suas tarefas</h5>
 <div class="row g-3">
-    {{ coluna('Pendente', atribuidas_a_mim|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', atribuidas_a_mim|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', atribuidas_a_mim|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+  {{ coluna('Pendente', atribuidas_a_mim|selectattr('status', 'equalto',
+  'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }} {{ coluna('Em andamento',
+  atribuidas_a_mim|selectattr('status', 'equalto', 'Em andamento')|list,
+  '#ffc107', 'bg-warning text-dark') }} {{ coluna('Concluída',
+  atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list, '#198754',
+  'bg-success') }} {{ coluna('Cancelada', atribuidas_a_mim|selectattr('status',
+  'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
 </div>
 
 <h5 class="fw-semibold mt-5 mb-3">Compartilhadas com você</h5>
 <div class="row g-3 mb-5">
-    {{ coluna('Pendente', delegadas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
-    {{ coluna('Em andamento', delegadas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107', 'bg-warning text-dark') }}
-    {{ coluna('Concluída', delegadas|selectattr('status', 'equalto', 'Concluída')|list, '#198754', 'bg-success') }}
-    {{ coluna('Cancelada', delegadas|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
+  {{ coluna('Pendente', delegadas|selectattr('status', 'equalto',
+  'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }} {{ coluna('Em andamento',
+  delegadas|selectattr('status', 'equalto', 'Em andamento')|list, '#ffc107',
+  'bg-warning text-dark') }} {{ coluna('Concluída',
+  delegadas|selectattr('status', 'equalto', 'Concluída')|list, '#198754',
+  'bg-success') }} {{ coluna('Cancelada', delegadas|selectattr('status',
+  'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
 </div>
 
 <!-- Janela de detalhes (somente leitura) -->
 <div class="modal fade" id="modalTarefa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border:0; border-radius:16px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <div class="text-secondary small text-uppercase mb-1">Status</div>
-                    <span id="modalStatus" class="badge rounded-pill"></span>
-                </div>
-                <div class="mb-3">
-                    <div class="text-secondary small text-uppercase mb-1">Descrição</div>
-                    <p id="modalDescricao" class="mb-0" style="white-space:pre-wrap;"></p>
-                </div>
-                <div class="row">
-                    <div class="col-6">
-                        <div class="text-secondary small text-uppercase mb-1">Criado por</div>
-                        <p id="modalCriado" class="mb-0"></p>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-secondary small text-uppercase mb-1">Compartilhado com</div>
-                        <p id="modalCompartilhado" class="mb-0"></p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" style="border-radius:10px;" data-bs-dismiss="modal">Fechar</button>
-                <a id="modalEditar" href="#" class="btn btn-principal">Editar</a>
-            </div>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border: 0; border-radius: 16px">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="text-secondary small text-uppercase mb-1">Status</div>
+          <span id="modalStatus" class="badge rounded-pill"></span>
         </div>
+        <div class="mb-3">
+          <div class="text-secondary small text-uppercase mb-1">Descrição</div>
+          <p id="modalDescricao" class="mb-0" style="white-space: pre-wrap"></p>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <div class="text-secondary small text-uppercase mb-1">
+              Criado por
+            </div>
+            <p id="modalCriado" class="mb-0"></p>
+          </div>
+          <div class="col-6">
+            <div class="text-secondary small text-uppercase mb-1">
+              Compartilhado com
+            </div>
+            <p id="modalCompartilhado" class="mb-0"></p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          style="border-radius: 10px"
+          data-bs-dismiss="modal"
+        >
+          Fechar
+        </button>
+        <a id="modalEditar" href="#" class="btn btn-principal">Editar</a>
+      </div>
     </div>
+  </div>
 </div>
 
 <script>
-    document.getElementById('modalTarefa').addEventListener('show.bs.modal', function (event) {
-        var d = event.relatedTarget.dataset;
-        document.getElementById('modalTitulo').textContent = d.titulo;
-        document.getElementById('modalDescricao').textContent = d.descricao || 'Sem descrição.';
-        document.getElementById('modalCriado').textContent = d.criado || '—';
-        document.getElementById('modalCompartilhado').textContent = d.compartilhado || '—';
-        var status = document.getElementById('modalStatus');
-        status.textContent = d.status;
-        status.className = 'badge rounded-pill ' + d.cor;
-        document.getElementById('modalEditar').href = d.editar;
+  document
+    .getElementById("modalTarefa")
+    .addEventListener("show.bs.modal", function (event) {
+      var d = event.relatedTarget.dataset;
+      document.getElementById("modalTitulo").textContent = d.titulo;
+      document.getElementById("modalDescricao").textContent =
+        d.descricao || "Sem descrição.";
+      document.getElementById("modalCriado").textContent = d.criado || "—";
+      document.getElementById("modalCompartilhado").textContent =
+        d.compartilhado || "—";
+      var status = document.getElementById("modalStatus");
+      status.textContent = d.status;
+      status.className = "badge rounded-pill " + d.cor;
+      document.getElementById("modalEditar").href = d.editar;
     });
 </script>
 

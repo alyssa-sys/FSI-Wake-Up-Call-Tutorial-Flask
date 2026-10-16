@@ -127,7 +127,6 @@ def login():
 @login_required
 def admin_dashboard():
     if not eh_admin():
-    if not eh_admin():
         flash("Acesso negado!", 'danger')
         return redirect(url_for('quadro'))
 
