@@ -67,18 +67,11 @@ cor_badge) %}
 {% endmacro %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-<<<<<<< HEAD
-  <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
-  <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal"
-    >+ Nova tarefa</a
-  >
-=======
     <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
     <div class="d-flex gap-2">
         <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Equipes</a>
         <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal">+ Nova tarefa</a>
     </div>
->>>>>>> origin/criar-equipe
 </div>
 
 <h5 class="fw-semibold mb-3">Suas tarefas</h5>
@@ -183,9 +176,6 @@ cor_badge) %}
     });
 </script>
 
-<<<<<<< HEAD
-{% endblock %}
-=======
 {% if grafico|sum > 0 %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
@@ -212,4 +202,3 @@ cor_badge) %}
 {% endif %}
 
 {% endblock %}
->>>>>>> origin/criar-equipe
