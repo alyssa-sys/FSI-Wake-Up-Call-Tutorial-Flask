@@ -11,6 +11,10 @@ class Usuario(db.Model, UserMixin):
     tarefasCriadas = db.relationship('Tarefa', backref='criador', foreign_keys='Tarefa.criador_id', lazy=True)
     tarefasAtribuidas = db.relationship('Tarefa', backref='responsavel', foreign_keys='Tarefa.responsavel_id', lazy=True)
     cargo = db.Column(db.String(20), nullable=False, default='usuario') #admin ou usuario
+    # # Tabela de associação para conexões entre usuários
+    # conexoes = db.Table('conexoes',
+    # db.Column('usuario_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True),
+    # db.Column('amigo_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True))
 
 class Tarefa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
