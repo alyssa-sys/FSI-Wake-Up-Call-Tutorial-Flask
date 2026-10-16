@@ -64,6 +64,17 @@
     {{ coluna('Cancelada', atribuidas_a_mim|selectattr('status', 'equalto', 'Cancelada')|list, '#dc3545', 'bg-danger') }}
 </div>
 
+<div class="cartao mb-4">
+    <h6 class="fw-bold mb-3">Resumo das suas tarefas</h6>
+    {% if grafico|sum > 0 %}
+    <div style="position:relative; height:240px;">
+        <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
+    </div>
+    {% else %}
+    <p class="text-secondary small mb-0">Nenhuma tarefa ainda para mostrar no gráfico.</p>
+    {% endif %}
+</div>
+
 <h5 class="fw-semibold mt-5 mb-3">Compartilhadas com você</h5>
 <div class="row g-3 mb-5">
     {{ coluna('Pendente', delegadas|selectattr('status', 'equalto', 'Pendente')|list, '#0dcaf0', 'bg-info text-dark') }}
@@ -121,5 +132,30 @@
         document.getElementById('modalEditar').href = d.editar;
     });
 </script>
+
+{% if grafico|sum > 0 %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+    var canvas = document.getElementById('graficoStatus');
+    var valores = JSON.parse(canvas.dataset.valores);
+
+    new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+            labels: ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'],
+            datasets: [{
+                data: valores,
+                backgroundColor: ['#0dcaf0', '#ffc107', '#198754', '#dc3545'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
+{% endif %}
 
 {% endblock %}

@@ -80,6 +80,9 @@ def gerar_codigo():
         if not Equipe.query.filter_by(codigo_acesso=codigo).first():
             return codigo
 
+def contar_status(tarefas):
+    return [sum(1 for t in tarefas if t.status == s) for s in STATUS_VALIDOS]
+
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -273,9 +276,11 @@ def quadro():
         Tarefa.responsavel_id != current_user.id,
         Tarefa.equipe_id.is_(None)
     ).all()
+    atribuidas = recebidas + para_mim
     return render_template('quadro.html',
-                           atribuidas_a_mim=recebidas + para_mim,
-                           delegadas=delegadas)
+                           atribuidas_a_mim=atribuidas,
+                           delegadas=delegadas,
+                           grafico=contar_status(atribuidas))
 
 #rota das equipes
 @app.route('/equipes')
@@ -324,7 +329,9 @@ def ver_equipe(equipe_id):
         flash('Você não faz parte dessa equipe.', 'danger')
         return redirect(url_for('equipes'))
     tarefas = Tarefa.query.filter_by(equipe_id=equipe.id).all()
-    return render_template('equipe.html', equipe=equipe, tarefas=tarefas, membros=equipe.membros, dono=eh_dono(equipe))
+    return render_template('equipe.html', equipe=equipe, tarefas=tarefas,
+                           membros=equipe.membros, dono=eh_dono(equipe),
+                           grafico=contar_status(tarefas))
 
 @app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])
 @login_required
