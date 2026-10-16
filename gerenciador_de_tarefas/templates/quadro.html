@@ -1,13 +1,11 @@
-{% extends "base.html" %} {% block title %}Quadro - Gerenciador de Tarefas{%
+{% extends "base.html" %} {% block title %} Quadro - Gerenciador de Tarefas {%
 endblock %} {% block content %} {% macro coluna(titulo, lista, cor_borda,
 cor_badge) %}
 <div class="col-12 col-md-6 col-lg-3">
-  <div class="coluna" style="border-top: 4px solid {{ cor_borda }};">
+  <div class="coluna" style="border-top: 4px solid {{ cor_borda }}">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h6 class="fw-bold mb-0">{{ titulo }}</h6>
-      <span class="badge rounded-pill bg-light text-dark border"
-        >{{ lista|length }}</span
-      >
+      <span class="badge rounded-pill bg-light text-dark border">{{ lista|length }}</span>
     </div>
 
     {% for tarefa in lista %}
