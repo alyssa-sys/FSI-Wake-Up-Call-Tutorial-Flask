@@ -158,6 +158,30 @@
                     <span class="chip chip-pessoa" title="Responsável: {{ tarefa.responsavel.nomeUsuario }}"><span class="mini">{{ tarefa.responsavel.nomeUsuario[:1]|upper }}</span>{{ tarefa.responsavel.nomeUsuario }}</span>
                 </div>
 
+                <!-- Botão individual de Exportação com Pop-up (Dropdown) para cada tarefa -->
+                <div class="dropdown mt-2">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.7rem; padding: 0.15rem 0.5rem;">
+                        📅 Exportar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size: 0.8rem;">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('exportar_ics', tarefa_id=tarefa.id) }}">
+                                <span>iCloud</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('exportar_ics', tarefa_id=tarefa.id) }}">
+                                <span>Android</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2" href="{{ link_google_calendar(tarefa) }}" target="_blank">
+                                <span>Google</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
                 {% if pode_mudar_status(tarefa) or pode_editar(tarefa) %}
                 <div class="acoes">
                     {% if pode_mudar_status(tarefa) %}
@@ -171,7 +195,18 @@
                     {% endif %}
                     {% if pode_editar(tarefa) %}
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
+                        <button type="button" class="btn btn-principal btn-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalEditarTarefa"
+                                data-action="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                                data-titulo="{{ tarefa.titulo }}"
+                                data-descricao="{{ tarefa.descricao or '' }}"
+                                data-status="{{ tarefa.status }}"
+                                data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                                data-categoria="{{ tarefa.categoria_id or '' }}"
+                                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}">
+                            Editar
+                        </button>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
                               onsubmit="return confirm('Excluir esta tarefa?');">
                             <button type="submit" class="btn btn-outline-danger">Excluir</button>
@@ -217,5 +252,49 @@
     });
 </script>
 {% endif %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      const inputEditPrazo = document.getElementById("editPrazo");
+      let fpEdit = null;
+
+      if (inputEditPrazo && typeof flatpickr !== "undefined") {
+          fpEdit = flatpickr(inputEditPrazo, {
+              enableTime: true,
+              dateFormat: "d/m/Y H:i",
+              time_24hr: true,
+              locale: "pt",
+              allowInput: true
+          });
+      }
+
+      const modalEditar = document.getElementById("modalEditarTarefa");
+      if (modalEditar) {
+          modalEditar.addEventListener("show.bs.modal", function (event) {
+              const button = event.relatedTarget;
+              if (!button) return;
+              
+              document.getElementById("formEditarTarefa").action = button.dataset.action || "";
+              document.getElementById("editTitulo").value = button.dataset.titulo || "";
+              document.getElementById("editDescricao").value = button.dataset.descricao || "";
+              document.getElementById("editStatus").value = button.dataset.status || "Pendente";
+              document.getElementById("editPrioridade").value = button.dataset.prioridade || "A definir";
+              
+              const editCat = document.getElementById("editCategoria");
+              if (editCat) {
+                  editCat.value = button.dataset.categoria || "";
+              }
+              
+              if (fpEdit) {
+                  if (button.dataset.prazo) {
+                      fpEdit.setDate(button.dataset.prazo, true, "d/m/Y H:i");
+                  } else {
+                      fpEdit.clear();
+                  }
+              }
+          });
+      }
+  });
+</script>
 
 {% endblock %}
