@@ -1,63 +1,73 @@
-<form method="GET" class="cartao mb-4">
-    <div class="row g-2">
-        <div class="col-12 col-md-4">
-            <input type="text" name="q" class="form-control" placeholder="Buscar por título ou descrição"
+<form method="GET" id="form-filtros" class="filtros cartao">
+    <div class="filtros-linha">
+        <span class="filtros-titulo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>
+            Filtrar
+        </span>
+
+        {% if not busca_no_topo %}
+        <label class="filtro-campo filtro-busca">Buscar
+            <input type="text" name="q" class="form-control" placeholder="Título ou descrição"
                    value="{{ request.args.get('q', '') }}">
-        </div>
-        <div class="col-6 col-md-2">
+        </label>
+        {% endif %}
+
+        <label class="filtro-campo">Status
             <select name="status" class="form-select">
-                <option value="">Todos os status</option>
+                <option value="">Todos</option>
                 {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
                 <option value="{{ s }}" {% if request.args.get('status') == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <div class="col-6 col-md-2">
+        </label>
+
+        <label class="filtro-campo">Prioridade
             <select name="prioridade" class="form-select">
-                <option value="">Toda prioridade</option>
+                <option value="">Todas</option>
                 {% for p in ['Alta', 'Média', 'Baixa', 'A definir'] %}
                 <option value="{{ p }}" {% if request.args.get('prioridade') == p %}selected{% endif %}>{{ p }}</option>
                 {% endfor %}
             </select>
-        </div>
-        <div class="col-6 col-md-2">
+        </label>
+
+        <label class="filtro-campo">Prazo
             <select name="prazo" class="form-select">
-                <option value="">Qualquer prazo</option>
+                <option value="">Qualquer</option>
                 <option value="atrasadas" {% if request.args.get('prazo') == 'atrasadas' %}selected{% endif %}>Atrasadas</option>
                 <option value="hoje" {% if request.args.get('prazo') == 'hoje' %}selected{% endif %}>Vencem hoje</option>
                 <option value="semana" {% if request.args.get('prazo') == 'semana' %}selected{% endif %}>Próximos 7 dias</option>
                 <option value="sem_prazo" {% if request.args.get('prazo') == 'sem_prazo' %}selected{% endif %}>Sem prazo</option>
             </select>
-        </div>
+        </label>
 
         {% if pessoas is defined %}
-        <div class="col-6 col-md-2">
+        <label class="filtro-campo">Responsável
             <select name="responsavel" class="form-select">
                 <option value="">Qualquer pessoa</option>
                 {% for u in pessoas %}
                 <option value="{{ u.id }}" {% if request.args.get('responsavel') == u.id|string %}selected{% endif %}>{{ u.nomeUsuario }}</option>
                 {% endfor %}
             </select>
-        </div>
+        </label>
         {% endif %}
 
         {% if categorias is defined %}
-        <div class="col-6 col-md-4">
+        <label class="filtro-campo">Categoria
             <select name="categoria" class="form-select">
-                <option value="">Todas as categorias</option>
+                <option value="">Todas</option>
                 <option value="nenhuma" {% if request.args.get('categoria') == 'nenhuma' %}selected{% endif %}>Sem categoria</option>
                 {% for c in categorias %}
                 <option value="{{ c.id }}" {% if request.args.get('categoria') == c.id|string %}selected{% endif %}>{{ c.nome }}</option>
                 {% endfor %}
             </select>
-        </div>
+        </label>
         {% endif %}
 
-        <div class="col-12 d-flex gap-2">
-            <button type="submit" class="btn btn-principal">Filtrar</button>
+        <div class="filtros-botoes">
             {% if filtrando %}
-            <a href="{{ request.path }}" class="btn btn-outline-secondary" style="border-radius:10px;">Limpar filtros</a>
+            <a href="{{ request.path }}" class="btn btn-outline-secondary">Limpar</a>
             {% endif %}
+            <button type="submit" class="btn btn-principal">Aplicar</button>
         </div>
     </div>
 </form>

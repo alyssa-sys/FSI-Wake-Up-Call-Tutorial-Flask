@@ -2,62 +2,138 @@
 {% block title %}Equipes - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0">Equipes</h2>
-    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Minhas tarefas</a>
+{# Os estilos desta tela estão no static.css (seção "Equipes"). #}
+
+{% macro ico(nome, t=18) -%}
+<svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if nome == 'users' %}<path d="M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-1.5a3.5 3.5 0 00-2.5-3.3M15.5 4.2a3.5 3.5 0 010 6.6"/>
+{%- elif nome == 'key' %}<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/>
+{%- elif nome == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif nome == 'arrow' %}<path d="M5 12h14M13 6l6 6-6 6"/>
+{%- elif nome == 'chevron' %}<path d="m9 6 6 6-6 6"/>
+{%- elif nome == 'user-plus' %}<path d="M15 20v-1.5a3.5 3.5 0 00-3.5-3.5h-4A3.5 3.5 0 004 18.5V20M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19 8v6M16 11h6"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+<div class="eq-topo">
+    <div>
+        <h1 class="titulo-pagina">Equipes</h1>
+        <p class="eq-subtitulo">Organize suas tarefas em grupo e colabore com sua equipe.</p>
+    </div>
+    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary">Minhas tarefas</a>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-12 col-md-6">
-        <div class="cartao">
-            <h5 class="fw-bold">Criar equipe</h5>
-            <form method="POST" action="{{ url_for('criar_equipe') }}" class="d-flex gap-2">
-                <input type="text" name="nome" class="form-control" placeholder="Nome da equipe" maxlength="100" required>
-                <button type="submit" class="btn btn-principal">Criar</button>
-            </form>
+{# ---------- Criar equipe / Entrar com código ---------- #}
+<section class="eq-duplo">
+    <div class="eq-card eq-card-destaque">
+        <svg class="eq-deco eq-deco-pessoas" viewBox="0 0 150 110" aria-hidden="true"><circle cx="102" cy="34" r="22"/><path d="M62 108c0-24 18-40 40-40s40 16 40 40z"/><circle cx="34" cy="62" r="14"/><path d="M8 108c0-18 12-30 26-30s26 12 26 30z"/></svg>
+        <div class="eq-card-topo">
+            <span class="eq-card-icone">{{ ico('users', 26) }}</span>
+            <div>
+                <h2 class="eq-card-titulo">Criar equipe</h2>
+                <p class="eq-card-sub">Forme um grupo para colaborar em tarefas e acompanhar o andamento juntos.</p>
+            </div>
         </div>
+        <form method="POST" action="{{ url_for('criar_equipe') }}" class="eq-form">
+            <label for="nomeEquipe" class="visually-hidden">Nome da equipe</label>
+            <div class="eq-form-linha">
+                <div class="eq-campo">
+                    {{ ico('users', 18) }}
+                    <input type="text" id="nomeEquipe" name="nome" class="form-control eq-input"
+                           placeholder="Ex: Desenvolvimento Mobile" maxlength="100" required>
+                </div>
+                <button type="submit" class="btn btn-principal">Criar equipe {{ ico('plus', 16) }}</button>
+            </div>
+        </form>
     </div>
-    <div class="col-12 col-md-6">
-        <div class="cartao">
-            <h5 class="fw-bold">Entrar com código</h5>
-            <form method="POST" action="{{ url_for('entrar_equipe') }}" class="d-flex gap-2">
-                <input type="text" name="codigo" class="form-control" placeholder="Código de acesso" required>
-                <button type="submit" class="btn btn-principal">Entrar</button>
-            </form>
-        </div>
-    </div>
-</div>
 
-<h5 class="fw-semibold mb-3">Equipes que você criou</h5>
-<div class="row g-3 mb-4">
-    {% for e in minhas %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
-            <div class="cartao">
-                <div class="fw-bold">{{ e.nome }}</div>
-                <div class="text-secondary small">{{ e.membros|length }} membro(s)</div>
+    <div class="eq-card eq-card-codigo">
+        <svg class="eq-deco eq-deco-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4.5 4.5 0 006.4 0l3-3a4.5 4.5 0 00-6.4-6.4l-1 1M14 10a4.5 4.5 0 00-6.4 0l-3 3a4.5 4.5 0 006.4 6.4l1-1"/></svg>
+        <div class="eq-card-topo">
+            <span class="eq-card-icone">{{ ico('key', 26) }}</span>
+            <div>
+                <h2 class="eq-card-titulo">Entrar com código</h2>
+                <p class="eq-card-sub">Use um código de convite para se unir a uma equipe existente.</p>
+            </div>
+        </div>
+        <form method="POST" action="{{ url_for('entrar_equipe') }}" class="eq-form">
+            <label for="codigoEquipe" class="visually-hidden">Código de acesso</label>
+            <div class="eq-form-linha">
+                <div class="eq-campo">
+                    {{ ico('key', 18) }}
+                    <input type="text" id="codigoEquipe" name="codigo" class="form-control eq-input"
+                           placeholder="Ex.: A1B2C3" autocomplete="off" required>
+                </div>
+                <button type="submit" class="btn btn-principal">Entrar {{ ico('arrow', 16) }}</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+{# ---------- Equipes que você criou ---------- #}
+<section class="eq-secao">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">{{ ico('users', 22) }} Equipes que você criou</h2>
+        <span class="eq-contagem">{{ minhas|length }} equipe{{ '' if minhas|length == 1 else 's' }}</span>
+    </div>
+    {% if minhas %}
+    <div class="eq-lista">
+        {% for e in minhas %}
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="eq-equipe">
+            <span class="eq-inicial" aria-hidden="true">{{ e.nome[:1]|upper }}</span>
+            <div class="eq-equipe-corpo">
+                <div class="eq-equipe-nome">{{ e.nome }}</div>
+                <div class="eq-equipe-meta">{{ ico('users', 14) }} {{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
+                <div class="eq-equipe-rodape">
+                    <div class="eq-tags"><span class="eq-tag">Criador</span></div>
+                    <span class="eq-seta">{{ ico('chevron', 18) }}</span>
+                </div>
             </div>
         </a>
+        {% endfor %}
     </div>
     {% else %}
-    <p class="text-secondary small">Você ainda não criou nenhuma equipe.</p>
-    {% endfor %}
-</div>
+    <div class="eq-vazio">
+        <p>Você ainda não criou nenhuma equipe.</p>
+    </div>
+    {% endif %}
+</section>
 
-<h5 class="fw-semibold mb-3">Equipes em que você participa</h5>
-<div class="row g-3 mb-5">
-    {% for e in participo %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
-            <div class="cartao">
-                <div class="fw-bold">{{ e.nome }}</div>
-                <div class="text-secondary small">Criada por {{ e.dono.nomeUsuario }}</div>
+{# ---------- Equipes em que você participa ---------- #}
+<section class="eq-secao mb-5">
+    {% if participo %}
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">{{ ico('users', 22) }} Equipes em que você participa</h2>
+        <span class="eq-contagem">{{ participo|length }} equipe{{ '' if participo|length == 1 else 's' }}</span>
+    </div>
+    <div class="eq-lista">
+        {% for e in participo %}
+        {% set pendentes = e.tarefas|selectattr('status', 'equalto', 'Pendente')|list|length %}
+        {% set concluidas = e.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="eq-equipe">
+            <span class="eq-inicial" aria-hidden="true">{{ e.nome[:1]|upper }}</span>
+            <div class="eq-equipe-corpo">
+                <div class="eq-equipe-nome">{{ e.nome }}</div>
+                <div class="eq-equipe-meta">{{ ico('users', 14) }} Criada por {{ e.dono.nomeUsuario }} · {{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
+                <div class="eq-equipe-rodape">
+                    <div class="eq-tags">
+                        <span class="eq-tag">Membro</span>
+                        <span class="eq-tag status-pendente">Pendente ({{ pendentes }})</span>
+                        <span class="eq-tag status-concluida">Concluída ({{ concluidas }})</span>
+                    </div>
+                    <span class="eq-seta">{{ ico('chevron', 18) }}</span>
+                </div>
             </div>
         </a>
+        {% endfor %}
     </div>
     {% else %}
-    <p class="text-secondary small">Você não participa de nenhuma equipe.</p>
-    {% endfor %}
-</div>
+    <div class="eq-vazio">
+        <span class="eq-vazio-icone">{{ ico('user-plus', 30) }}</span>
+        <h3 class="eq-vazio-titulo">Ainda não faz parte de nenhuma equipe?</h3>
+        <p>Crie sua própria equipe ou entre em uma existente para começar.</p>
+    </div>
+    {% endif %}
+</section>
 
 {% endblock %}

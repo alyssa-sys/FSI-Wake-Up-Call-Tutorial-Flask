@@ -2,70 +2,97 @@
 {% block title %}{{ categoria.nome }} - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-{% set cores = {'Pendente': 'bg-info text-dark', 'Em andamento': 'bg-warning text-dark', 'Concluída': 'bg-success', 'Cancelada': 'bg-danger'} %}
+{# Os estilos desta tela estão no static.css (seção "Categoria"). Reaproveita eqp-, eq- e as peças do quadro. #}
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <div>
-        <h2 class="fw-bold mb-0">{{ categoria.nome }}</h2>
-        <div class="text-secondary small">{{ tarefas|length }} tarefa{{ '' if tarefas|length == 1 else 's' }}</div>
+{% macro ico(nome, t=18) -%}
+<svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if nome == 'voltar' %}<path d="M19 12H5M11 6l-6 6 6 6"/>
+{%- elif nome == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif nome == 'pasta-mais' %}<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM12 10.5v5M9.5 13h5"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{% set status_classe = {'Pendente': 'status-pendente', 'Em andamento': 'status-andamento', 'Concluída': 'status-concluida', 'Cancelada': 'status-cancelada'} %}
+
+{# ---------- Topo ---------- #}
+<div class="eqp-topo">
+    <div class="eqp-id">
+        <span class="eq-inicial" aria-hidden="true">{{ categoria.nome[:1]|upper }}</span>
+        <div class="min-w-0">
+            <h1>{{ categoria.nome }}</h1>
+            <div class="eqp-meta">{{ tarefas|length }} tarefa{{ '' if tarefas|length == 1 else 's' }}</div>
+        </div>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Categorias</a>
-        <a href="{{ url_for('adicionar_tarefa', categoria=categoria.id) }}" class="btn btn-principal">+ Nova tarefa aqui</a>
+    <div class="eqp-acoes">
+        <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary">{{ ico('voltar', 16) }} Categorias</a>
+        <a href="{{ url_for('adicionar_tarefa', categoria=categoria.id) }}" class="btn btn-principal">{{ ico('plus', 16) }} Nova tarefa aqui</a>
     </div>
 </div>
 
-<div class="row g-3 mb-4">
+{# ---------- Tarefas da categoria ---------- #}
+{% if not tarefas %}
+<p class="cat-vazio">Nenhuma tarefa nesta categoria ainda. Adicione abaixo ou crie uma nova.</p>
+{% endif %}
+
+<div class="cat-tarefas">
     {% for tarefa in tarefas %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <div class="cartao-tarefa h-100">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-                <div class="fw-semibold">{{ tarefa.titulo }}</div>
-                <span class="badge rounded-pill {{ cores[tarefa.status] }}">{{ tarefa.status }}</span>
-            </div>
-            {% if tarefa.descricao %}
-            <div class="text-secondary small mt-1">{{ tarefa.descricao|truncate(80) }}</div>
-            {% endif %}
-            <div class="small mt-2">
-                <span class="badge bg-light text-dark border">{{ tarefa.prioridade or 'A definir' }}</span>
-                {% if tarefa.prazo %}
-                <span class="{{ 'text-danger fw-semibold' if tarefa_atrasada(tarefa) else 'text-secondary' }}">
-                    {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if tarefa_atrasada(tarefa) %} (atrasada){% endif %}
-                </span>
-                {% endif %}
-            </div>
-            <div class="d-flex gap-2 mt-3">
-                <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
-                <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
-                    <input type="hidden" name="categoria_id" value="">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
-                </form>
-            </div>
+    {% set atrasada = tarefa_atrasada(tarefa) %}
+    {% set prio = tarefa.prioridade or 'A definir' %}
+    <article class="cartao-tarefa cat-tarefa {{ status_classe[tarefa.status] }}">
+        <div class="cat-tarefa-topo">
+            <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
+            <span class="selo">{{ tarefa.status }}</span>
         </div>
-    </div>
-    {% else %}
-    <p class="text-secondary">Nenhuma tarefa nesta categoria ainda. Adicione abaixo ou crie uma nova.</p>
+        {% if tarefa.descricao %}
+        <div class="tarefa-desc">{{ tarefa.descricao|truncate(80) }}</div>
+        {% endif %}
+        <div class="chips">
+            <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+            {% if tarefa.prazo %}
+            <span class="chip {{ 'chip-atrasada' if atrasada }}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} (atrasada){% endif %}
+            </span>
+            {% endif %}
+        </div>
+        <div class="cat-tarefa-acoes">
+            <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
+            <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
+                <input type="hidden" name="categoria_id" value="">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
+            </form>
+        </div>
+    </article>
     {% endfor %}
 </div>
 
-<div class="cartao mb-5">
-    <h6 class="fw-bold mb-3">Adicionar tarefas existentes</h6>
+{# ---------- Adicionar tarefas existentes ---------- #}
+<section class="cartao cat-existentes mb-5">
+    <div class="eq-secao-cab">
+        <h2 class="eqp-card-titulo">{{ ico('pasta-mais', 20) }} Adicionar tarefas existentes</h2>
+        {% if disponiveis %}
+        <span class="eq-contagem">{{ disponiveis|length }} disponíve{{ 'l' if disponiveis|length == 1 else 'is' }}</span>
+        {% endif %}
+    </div>
     {% if disponiveis %}
+    <p class="eqp-ajuda">Marque as tarefas que você quer trazer para {{ categoria.nome }}.</p>
     <form method="POST" action="{{ url_for('adicionar_a_categoria', categoria_id=categoria.id) }}">
-        {% for t in disponiveis %}
-        <div class="form-check mb-1">
-            <input class="form-check-input" type="checkbox" name="tarefa_ids" value="{{ t.id }}" id="t{{ t.id }}">
-            <label class="form-check-label" for="t{{ t.id }}">
-                {{ t.titulo }}
-                {% if t.categoria %}<span class="text-secondary small">(em {{ t.categoria.nome }})</span>{% endif %}
+        <div class="cat-linhas">
+            {% for t in disponiveis %}
+            <label class="cat-linha" for="t{{ t.id }}">
+                <input class="form-check-input" type="checkbox" name="tarefa_ids" value="{{ t.id }}" id="t{{ t.id }}">
+                <span>
+                    {{ t.titulo }}
+                    {% if t.categoria %}<span class="cat-linha-em">(em {{ t.categoria.nome }})</span>{% endif %}
+                </span>
             </label>
+            {% endfor %}
         </div>
-        {% endfor %}
-        <button type="submit" class="btn btn-principal mt-3">Adicionar à categoria</button>
+        <button type="submit" class="btn btn-principal cat-adicionar">{{ ico('plus', 16) }} Adicionar à categoria</button>
     </form>
     {% else %}
-    <p class="text-secondary small mb-0">Todas as suas tarefas individuais já estão nesta categoria.</p>
+    <p class="eqp-ajuda">Todas as suas tarefas individuais já estão nesta categoria.</p>
     {% endif %}
-</div>
+</section>
 
 {% endblock %}

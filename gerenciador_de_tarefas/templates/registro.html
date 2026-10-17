@@ -2,43 +2,133 @@
 {% block title %}Registro - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-<div class="row justify-content-center mt-4">
-    <div class="col-12 col-md-8 col-lg-5">
-        <div class="cartao">
-            <div class="text-center mb-4">
-                <h2 class="fw-bold mb-1">Crie sua conta</h2>
-            </div>
+{# Os estilos desta tela estão no static.css (seção "Telas de entrada"). #}
 
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label" for="nomeUsuario">Nome de Usuário</label>
-                    <input type="text" id="nomeUsuario" name="nomeUsuario" class="form-control"
-                           placeholder="Ex.: alvaro123" required autofocus>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="nome">Nome / Apelido</label>
-                    <input type="text" id="nome" name="nome" class="form-control"
-                           placeholder="Como quer ser chamado">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label" for="email">E-mail</label>
-                    <input type="email" id="email" name="email" class="form-control"
-                           placeholder="seuemail@gmail.com" required>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label" for="senha">Senha</label>
-                    <input type="password" id="senha" name="senha" class="form-control"
-                           placeholder="Crie uma senha" required>
-                </div>
-                <button type="submit" class="btn btn-principal w-100">Registrar</button>
-            </form>
+<div class="lc-page">
+  <div class="lc-hero">
+    <section class="lc-intro">
+      <h1 class="lc-headline">Seu quadro de tarefas começa aqui.</h1>
+      <p class="lc-sub">
+        Crie sua conta para organizar suas tarefas, sozinho ou em equipe.
+      </p>
+    </section>
 
-            <p class="text-center text-secondary mt-4 mb-0">
-                Já tem uma conta?
-                <a href="{{ url_for('login') }}" class="fw-semibold text-decoration-none">Faça login aqui</a>
-            </p>
+    <section class="lc-card lc-card-centro">
+      <h2 class="lc-titulo">Crie sua conta</h2>
+      <p class="lc-desc">Preencha os campos abaixo.</p>
+
+      <form method="POST">
+        <div class="lc-campo">
+          <label for="nomeUsuario">Nome de Usuário</label>
+          <div class="lc-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            <input
+              type="text"
+              id="nomeUsuario"
+              name="nomeUsuario"
+              class="form-control lc-input"
+              placeholder="Ex.: alvaro123"
+              autocomplete="username"
+              required
+              autofocus
+            />
+          </div>
         </div>
-    </div>
+
+        <div class="lc-campo">
+          <label for="nome">Nome / Apelido</label>
+          <div class="lc-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
+              <circle cx="7.5" cy="7.5" r="1" />
+            </svg>
+            <input
+              type="text"
+              id="nome"
+              name="nome"
+              class="form-control lc-input"
+              placeholder="Como quer ser chamado"
+              autocomplete="nickname"
+            />
+          </div>
+        </div>
+
+        <div class="lc-campo">
+          <label for="email">E-mail</label>
+          <div class="lc-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m3 7 9 6 9-6" />
+            </svg>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              class="form-control lc-input"
+              placeholder="seuemail@gmail.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="lc-campo">
+          <label for="senha">Senha</label>
+          <div class="lc-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="5" y="11" width="14" height="10" rx="2" />
+              <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+            </svg>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              class="form-control lc-input lc-input-senha"
+              placeholder="Crie uma senha"
+              autocomplete="new-password"
+              required
+            />
+            <button type="button" class="lc-mostrar" id="verSenha" aria-pressed="false">
+              <svg id="olhoOculto" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.9 10.9 0 0 1 12 20c-7 0-10-8-10-8a18.5 18.5 0 0 1 4.06-5.94" />
+                <path d="M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 10 8 10 8a18.6 18.6 0 0 1-2.16 3.19" />
+                <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                <path d="M2 2l20 20" />
+              </svg>
+              <svg id="olhoVisivel" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: none">
+                <path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8S2 12 2 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <span id="textoSenha">Mostrar</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-principal lc-entrar w-100">
+          Registrar
+        </button>
+      </form>
+
+      <p class="lc-rodape">
+        Já tem uma conta?
+        <a href="{{ url_for('login') }}">Faça login aqui</a>
+      </p>
+    </section>
+  </div>
 </div>
 
+<script>
+  document.getElementById("verSenha").addEventListener("click", function () {
+    var campo = document.getElementById("senha");
+    var mostrar = campo.type === "password";
+    campo.type = mostrar ? "text" : "password";
+    this.setAttribute("aria-pressed", mostrar ? "true" : "false");
+    document.getElementById("textoSenha").textContent = mostrar ? "Ocultar" : "Mostrar";
+    document.getElementById("olhoOculto").style.display = mostrar ? "none" : "";
+    document.getElementById("olhoVisivel").style.display = mostrar ? "" : "none";
+  });
+</script>
 {% endblock %}
