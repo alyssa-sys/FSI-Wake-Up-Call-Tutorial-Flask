@@ -2,87 +2,119 @@
 {% block title %}Editar Tarefa - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-<div class="row justify-content-center mt-4">
-    <div class="col-12 col-md-8 col-lg-6">
-        <div class="cartao">
-            <div class="mb-4">
-                <h2 class="fw-bold mb-1">Editar Tarefa</h2>
-                <p class="text-secondary mb-0">
-                    {% if pode_editar(tarefa) %}Atualize os dados da tarefa{% else %}Você pode alterar apenas o status desta tarefa{% endif %}
+{# Os estilos desta tela estão no static.css (seção "Formulário de tarefa", prefixo form-). Compartilhado com adicionar_tarefa.html. #}
+
+{% macro ico(nome, t=18) -%}
+<svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if nome == 'lapis' %}<path d="M4 20h4L19.5 8.5a2.1 2.1 0 00-3-3L5 17zM14.5 7.5l3 3"/>
+{%- elif nome == 'titulo' %}<path d="M4 7V5h16v2M12 5v14M9 19h6"/>
+{%- elif nome == 'pasta' %}<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+{%- elif nome == 'bandeira' %}<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>
+{%- elif nome == 'status' %}<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>
+{%- elif nome == 'seta-baixo' %}<path d="m6 9 6 6 6-6"/>
+{%- elif nome == 'check' %}<path d="M5 12.5l4.5 4.5L19 7.5"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{% set editavel = pode_editar(tarefa) %}
+
+<div class="form-pagina">
+    <section class="form-cartao">
+        <div class="form-cab">
+            <span class="eq-card-icone">{{ ico('lapis', 26) }}</span>
+            <div>
+                <h1 class="form-titulo">Editar Tarefa</h1>
+                <p class="form-sub">
+                    {% if editavel %}Atualize os dados da tarefa{% else %}Você pode alterar apenas o status desta tarefa{% endif %}
                 </p>
             </div>
+        </div>
 
-            <form method="POST">
-                <div class="mb-3">
-                    <label class="form-label" for="titulo">Título</label>
-                    <input type="text" id="titulo" name="titulo" class="form-control" value="{{ tarefa.titulo }}" maxlength="150" required
-                    {% if pode_editar(tarefa) %}autofocus{% else %}readonly{% endif %}
+        <form method="POST">
+            <div class="form-campo">
+                <label class="form-rotulo" for="titulo">Título</label>
+                <div class="form-wrap">
+                    <span class="form-ico">{{ ico('titulo', 18) }}</span>
+                    <input type="text" id="titulo" name="titulo" class="form-control form-input" value="{{ tarefa.titulo }}" maxlength="150" required
+                    {% if editavel %}autofocus{% else %}readonly{% endif %}
                     >
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label class="form-label" for="descricao">Descrição</label>
-                    <textarea id="descricao" name="descricao" class="form-control" rows="4" required
-                        {% if not pode_editar(tarefa) %}readonly{% endif %}
-                    >{{ tarefa.descricao }}</textarea>
-                </div>
+            <div class="form-campo">
+                <label class="form-rotulo" for="descricao">Descrição</label>
+                <textarea id="descricao" name="descricao" class="form-control form-input form-area" rows="4" required
+                    {% if not editavel %}readonly{% endif %}
+                >{{ tarefa.descricao }}</textarea>
+            </div>
 
-                {% if tarefa.criador_id == current_user.id and not tarefa.equipe_id %}
-                <div class="mb-3">
-                    <label class="form-label" for="categoria_id">Categoria</label>
-                    <select id="categoria_id" name="categoria_id" class="form-select">
+            {% if tarefa.criador_id == current_user.id and not tarefa.equipe_id %}
+            <div class="form-campo">
+                <label class="form-rotulo" for="categoria_id">Categoria</label>
+                <div class="form-wrap">
+                    <span class="form-ico">{{ ico('pasta', 18) }}</span>
+                    <select id="categoria_id" name="categoria_id" class="form-select form-input">
                         <option value="">Sem categoria</option>
                         {% for c in categorias %}
                         <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
                         {% endfor %}
                     </select>
+                    <span class="form-seta">{{ ico('seta-baixo', 16) }}</span>
                 </div>
-                {% endif %}
+            </div>
+            {% endif %}
 
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label" for="prioridade">Prioridade</label>
-                        <select id="prioridade" name="prioridade" class="form-select"
-                            {% if not pode_editar(tarefa) %}disabled{% endif %}
+            <div class="form-grade form-campo">
+                <div>
+                    <label class="form-rotulo" for="prioridade">Prioridade</label>
+                    <div class="form-wrap">
+                        <span class="form-ico">{{ ico('bandeira', 18) }}</span>
+                        <select id="prioridade" name="prioridade" class="form-select form-input"
+                            {% if not editavel %}disabled{% endif %}
                         >
                             {% for prioridade in ['A definir', 'Baixa', 'Média', 'Alta'] %}
                             <option value="{{ prioridade }}" {% if (tarefa.prioridade or 'A definir') == prioridade %}selected{% endif %}>{{ prioridade }}</option>
                             {% endfor %}
                         </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="prazo">Prazo</label>
-                        <input type="datetime-local" id="prazo" name="prazo" class="form-control"
-                            value="{{ tarefa.prazo.strftime('%Y-%m-%dT%H:%M') if tarefa.prazo else '' }}"
-                            {% if not tarefa.prazo or tarefa.prazo > agora %}min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}"{% endif %}
-                            {% if not pode_editar(tarefa) %}readonly{% endif %}
-                        >
-                        {% if pode_editar(tarefa) %}
-                        <div class="form-text">Deixe vazio para remover o prazo.</div>
-                        {% else %}
-                        <div class="form-text">Apenas o criador ou administrador pode alterar.</div>
-                        {% endif %}
+                        <span class="form-seta">{{ ico('seta-baixo', 16) }}</span>
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label" for="status">Status</label>
-                    <select id="status" name="status" class="form-select">
+                <div>
+                    <label class="form-rotulo" for="prazo">Prazo</label>
+                    <input type="datetime-local" id="prazo" name="prazo" class="form-control form-input form-sem-icone"
+                        value="{{ tarefa.prazo.strftime('%Y-%m-%dT%H:%M') if tarefa.prazo else '' }}"
+                        {% if not tarefa.prazo or tarefa.prazo > agora %}min="{{ agora.strftime('%Y-%m-%dT%H:%M') }}"{% endif %}
+                        {% if not editavel %}readonly{% endif %}
+                    >
+                    {% if editavel %}
+                    <div class="form-dica">Deixe vazio para remover o prazo.</div>
+                    {% else %}
+                    <div class="form-dica">Apenas o criador ou administrador pode alterar.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-campo form-campo-grande">
+                <label class="form-rotulo" for="status">Status</label>
+                <div class="form-wrap">
+                    <span class="form-ico">{{ ico('status', 18) }}</span>
+                    <select id="status" name="status" class="form-select form-input">
                         {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
                         <option value="{{ s }}" {% if tarefa.status == s %}selected{% endif %}>{{ s }}</option>
                         {% endfor %}
                     </select>
+                    <span class="form-seta">{{ ico('seta-baixo', 16) }}</span>
                 </div>
+            </div>
 
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('ver_equipe', equipe_id=tarefa.equipe_id) if tarefa.equipe_id else (url_for('admin_dashboard') if eh_admin() else url_for('quadro')) }}"
-                       class="btn btn-outline-secondary w-50" style="border-radius:10px; padding:.7rem 1rem;">Cancelar</a>
-                    <button type="submit" class="btn btn-principal w-50">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
+            <div class="form-acoes">
+                <a href="{{ url_for('ver_equipe', equipe_id=tarefa.equipe_id) if tarefa.equipe_id else (url_for('admin_dashboard') if eh_admin() else url_for('quadro')) }}"
+                   class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-principal">{{ ico('check', 16) }} Salvar</button>
+            </div>
+        </form>
+    </section>
 </div>
 
 {% endblock %}
