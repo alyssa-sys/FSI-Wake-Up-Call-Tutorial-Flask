@@ -375,5 +375,72 @@
           }
       });
     </script>
+    <!-- Modal / Pop-up de Editar Tarefa -->
+    <div class="modal fade" id="modalEditarTarefa" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-light" style="background-color: var(--bs-body-bg, #1a1a1a); border: 1px solid var(--bs-border-color, #333); border-radius: 16px;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold mb-0">Editar Tarefa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                
+                <form id="formEditarTarefa" method="POST">
+                    <div class="modal-body py-4">
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary" for="editTitulo">Título</label>
+                            <input type="text" id="editTitulo" name="titulo" class="form-control bg-dark text-light border-secondary" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary" for="editDescricao">Descrição</label>
+                            <textarea id="editDescricao" name="descricao" class="form-control bg-dark text-light border-secondary" rows="3"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="editStatus">Status</label>
+                                <select id="editStatus" name="status" class="form-select bg-dark text-light border-secondary">
+                                    <option value="Pendente">Pendente</option>
+                                    <option value="Em andamento">Em andamento</option>
+                                    <option value="Concluída">Concluída</option>
+                                    <option value="Cancelada">Cancelada</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="editPrioridade">Prioridade</label>
+                                <select id="editPrioridade" name="prioridade" class="form-select bg-dark text-light border-secondary">
+                                    <option value="Baixa">Baixa</option>
+                                    <option value="Média">Média</option>
+                                    <option value="Alta">Alta</option>
+                                    <option value="A definir">A definir</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="editCategoria">Categoria</label>
+                                <select id="editCategoria" name="categoria_id" class="form-select bg-dark text-light border-secondary">
+                                    <option value="">Sem categoria</option>
+                                    {% for c in categorias_globais %}
+                                    <option value="{{ c.id }}">{{ c.nome }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="editPrazo">Prazo</label>
+                                <input type="text" id="editPrazo" name="prazo" class="form-control bg-dark text-light border-secondary" placeholder="dd/mm/aaaa hh:mm" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top border-secondary d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal" style="border-radius:8px;">Cancelar</button>
+                        <button type="submit" class="btn btn-principal btn-sm px-3" style="border-radius:8px;">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
   </body>
 </html>

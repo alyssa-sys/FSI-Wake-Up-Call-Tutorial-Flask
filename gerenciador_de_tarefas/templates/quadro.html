@@ -167,7 +167,18 @@
 
                 <div class="acoes mt-3">
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
+                        <button type="button" class="btn btn-principal btn-sm" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalEditarTarefa"
+                                data-action="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                                data-titulo="{{ tarefa.titulo }}"
+                                data-descricao="{{ tarefa.descricao or '' }}"
+                                data-status="{{ tarefa.status }}"
+                                data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                                data-categoria="{{ tarefa.categoria_id or '' }}"
+                                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}">
+                            Editar
+                        </button>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
                               onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
                             <button type="submit" class="btn btn-outline-danger">Excluir</button>
@@ -217,12 +228,49 @@
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
-                <a id="modalEditar" href="#" class="btn btn-principal">Editar</a>
+                <button type="button" id="modalEditar" class="btn btn-principal" data-bs-toggle="modal" data-bs-target="#modalEditarTarefa">Editar</button>
             </div>
         </div>
     </div>
 </div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      const inputEditPrazo = document.getElementById("editPrazo");
+      let fpEdit = null;
 
+      if (inputEditPrazo) {
+          fpEdit = flatpickr(inputEditPrazo, {
+              enableTime: true,
+              dateFormat: "d/m/Y H:i",
+              time_24hr: true,
+              locale: "pt",
+              allowInput: true
+          });
+      }
+
+      const modalEditar = document.getElementById("modalEditarTarefa");
+      if (modalEditar) {
+          modalEditar.addEventListener("show.bs.modal", function (event) {
+              const button = event.relatedTarget;
+              
+              document.getElementById("formEditarTarefa").action = button.dataset.action;
+              document.getElementById("editTitulo").value = button.dataset.titulo;
+              document.getElementById("editDescricao").value = button.dataset.descricao;
+              document.getElementById("editStatus").value = button.dataset.status;
+              document.getElementById("editPrioridade").value = button.dataset.prioridade;
+              document.getElementById("editCategoria").value = button.dataset.categoria;
+              
+              if (fpEdit) {
+                  if (button.dataset.prazo) {
+                      fpEdit.setDate(button.dataset.prazo, true, "d/m/Y H:i");
+                  } else {
+                      fpEdit.clear();
+                  }
+              }
+          });
+      }
+  });
+</script>
 <script>
     document.getElementById('modalTarefa').addEventListener('show.bs.modal', function (event) {
         var d = event.relatedTarget.dataset;
@@ -234,7 +282,16 @@
         var status = document.getElementById('modalStatus');
         status.textContent = d.status;
         status.className = 'badge rounded-pill ' + d.cor;
-        document.getElementById('modalEditar').href = d.editar;
+        
+        // Repassa os dados para o botão de editar acionar o modal de formulário corretamente
+        var btnEditar = document.getElementById('modalEditar');
+        btnEditar.dataset.action = d.editar;
+        btnEditar.dataset.titulo = d.titulo;
+        btnEditar.dataset.descricao = d.descricao || '';
+        btnEditar.dataset.status = d.status;
+        btnEditar.dataset.prioridade = d.prioridade || 'A definir';
+        btnEditar.dataset.categoria = d.categoriaId || '';
+        btnEditar.dataset.prazo = d.prazo || '';
     });
 </script>
 
