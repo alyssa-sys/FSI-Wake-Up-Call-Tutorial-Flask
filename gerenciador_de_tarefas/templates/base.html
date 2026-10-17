@@ -25,6 +25,8 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
@@ -49,14 +51,14 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
         <span>Aparência</span>
       </button>
-      <div class="dropdown-menu p-3" style="min-width: 240px">
-        <div class="small text-secondary text-uppercase mb-1">Modo</div>
+      <div class="dropdown-menu p-3 menu-aparencia">
+        <div class="small text-secondary mb-1">Modo</div>
         <div class="btn-group w-100 mb-3" role="group" aria-label="Modo">
           <button type="button" class="btn btn-sm btn-outline-secondary" data-opcao-modo="auto">Auto</button>
           <button type="button" class="btn btn-sm btn-outline-secondary" data-opcao-modo="claro">Claro</button>
           <button type="button" class="btn btn-sm btn-outline-secondary" data-opcao-modo="escuro">Escuro</button>
         </div>
-        <div class="small text-secondary text-uppercase mb-1">Paleta</div>
+        <div class="small text-secondary mb-1">Paleta</div>
         <div class="d-grid gap-1">
           <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="padrao">Verde (padrão)</button>
           <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="indigo">Índigo</button>
@@ -78,7 +80,7 @@
 
     {% if current_user.is_authenticated %}
     <div class="app">
-      <aside class="lateral">
+      <aside class="lateral" aria-label="Menu principal">
         <a
           class="marca"
           href="{{ url_for('admin_dashboard') if current_user.cargo == 'admin' else url_for('quadro') }}"
@@ -124,7 +126,7 @@
           {% else %}
             <span class="usuario-foto">{{ current_user.nomeUsuario[:1]|upper }}</span>
           {% endif %}
-          <span class="usuario-nome">{{ current_user.nome }}<small>Meu perfil</small></span>
+          <span class="usuario-nome">{{ current_user.nome or current_user.nomeUsuario }}<small>Meu perfil</small></span>
         </a>
       </aside>
 
