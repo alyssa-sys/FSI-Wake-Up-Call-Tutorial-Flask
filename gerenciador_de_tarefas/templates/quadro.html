@@ -2,501 +2,257 @@
 {% block title %}Quadro - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-{% macro coluna(titulo, lista, classe, rotulo) %}
-<div class="col-12 col-md-6 col-lg-3">
+{# grafico = [pendente, em andamento, concluída, cancelada] #}
+{% set total = grafico|sum %}
+{% set abertas = grafico[0] + grafico[1] %}
+{% set pct = ((grafico[2] * 100) / total)|round|int if total else 0 %}
 
-    <div class="coluna {{ classe }}">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-semibold mb-0">{{ titulo }}</h6>
-            <span class="contador">{{ lista|length }}</span>
-        </div>
-
-        {% for tarefa in lista %}
-
-        <div class="cartao-tarefa">
-
-            <div
-                class="area-clique"
-                data-bs-toggle="modal"
-                data-bs-target="#modalTarefa"
-
-                data-titulo="{{ tarefa.titulo }}"
-                data-descricao="{{ tarefa.descricao or '' }}"
-                data-status="{{ tarefa.status }}"
-                data-cor="{{ classe }}"
-
-                data-criado="{{ tarefa.criador.nomeUsuario if tarefa.criador else '' }}"
-                data-compartilhado="{{ tarefa.responsavel.nomeUsuario if tarefa.responsavel else '' }}"
-
-                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') if tarefa.prazo else '' }}"
-                data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
-                data-atrasada="{{ 'true' if tarefa_atrasada(tarefa) else 'false' }}"
-                data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
-
-                data-rotulo="{{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}"
-                data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
-            >
-
-                <div class="fw-semibold mb-1">
-                    {{ tarefa.titulo }}
-                </div>
-
-                {% if tarefa.descricao %}
-                    <div class="text-secondary small">
-                        {{ tarefa.descricao|truncate(70) }}
-                    </div>
-                {% endif %}
-
-                {% if tarefa.prazo %}
-                    <div class="prazo-info {% if tarefa_atrasada(tarefa) %}prazo-atrasado{% endif %}">
-
-                        <span>
-                            Prazo:
-                            {{ tarefa.prazo.strftime('%d/%m/%Y às %H:%M') }}
-                        </span>
-
-                        {% if tarefa_atrasada(tarefa) %}
-                            <span class="badge-prazo">
-                                Atrasada
-                            </span>
-                        {% endif %}
-
-                    </div>
-                {% endif %}
-
-                {% if tarefa.prioridade != 'A definir' %}
-                    <div class="prioridade-info">
-                        Prioridade: {{ tarefa.prioridade }}
-                    </div>
-                {% endif %}
-
-                {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
-                    <div class="mt-1">
-                        <span class="badge bg-info-subtle text-dark border">{{ tarefa.categoria.nome }}</span>
-                    </div>
-                {% endif %}
-
-                {% if rotulo == 'de' and tarefa.criador_id != tarefa.responsavel_id %}
-                    <div class="text-secondary small mt-1">
-                        de: {{ tarefa.criador.nomeUsuario }}
-                    </div>
-
-                {% elif rotulo == 'para' %}
-                    <div class="text-secondary small mt-1">
-                        para: {{ tarefa.responsavel.nomeUsuario }}
-                    </div>
-                {% endif %}
-
-            </div>
-
-            <div class="acoes mt-3">
-
-                {% if tarefa.criador_id == current_user.id %}
-                <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}" class="mb-2">
-                    <select name="categoria_id" class="form-select form-select-sm" onchange="this.form.submit()">
-                        <option value="">Sem categoria</option>
-                        {% for c in categorias %}
-                        <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </form>
-                {% endif %}
-
-                <div class="d-flex gap-2">
-
-                    <a
-                        href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
-                        class="btn btn-principal"
-                    >
-                        {{ 'Editar' if pode_editar(tarefa) else 'Alterar status' }}
-                    </a>
-
-                    {% if pode_excluir(tarefa) %}
-
-                    <form
-                        action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}"
-                        method="POST"
-                        onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');"
-                    >
-                        <button
-                            type="submit"
-                            class="btn btn-outline-danger"
-                        >
-                            Excluir
-                        </button>
-                    </form>
-
-                    {% endif %}
-
-                </div>
-
-            </div>
-
-        </div>
-
+<div class="quadro-topo">
+    <div class="saudacao">
+        {% if current_user.foto_perfil and current_user.foto_perfil != 'default.png' %}
+            <img src="{{ url_for('static', filename='uploads/' + current_user.foto_perfil) }}" alt="" class="usuario-foto saudacao-foto" />
         {% else %}
-
-            <p class="text-secondary small text-center py-3 mb-0">
-                Nenhuma tarefa
+            <span class="usuario-foto saudacao-foto">{{ current_user.nomeUsuario[:1]|upper }}</span>
+        {% endif %}
+        <div>
+            <h1>Olá, {{ current_user.nome.split()[0] }}!</h1>
+            <p>
+                {% if abertas == 0 %}Você não tem tarefas em aberto.
+                {% elif abertas == 1 %}Você tem 1 tarefa em aberto.
+                {% else %}Você tem {{ abertas }} tarefas em aberto.{% endif %}
             </p>
+        </div>
+    </div>
+    <div class="topo-acoes">
+        <label class="busca-topo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <input type="search" name="q" form="form-filtros" placeholder="Buscar" aria-label="Buscar tarefas"
+                   value="{{ request.args.get('q', '') }}">
+        </label>
+        <a href="{{ url_for('adicionar_tarefa') }}" class="btn btn-principal btn-adicionar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Adicionar
+        </a>
+    </div>
+</div>
 
+<section class="resumo">
+
+    <div class="cartao">
+        <h2>Visão geral</h2>
+        <div class="linha-resumo">
+            <div class="d-flex flex-column gap-3">
+                <div><div class="num-grande">{{ total }}</div><div class="num-rotulo">Total de tarefas</div></div>
+                <div><div class="num-grande">{{ abertas }}</div><div class="num-rotulo">Em aberto</div></div>
+            </div>
+            <div class="anel-wrap" role="img" aria-label="{{ pct }}% das tarefas concluídas">
+                <div class="anel" style="--p: {{ pct }}"></div>
+                <div class="anel-centro"><b>{{ pct }}%</b><span>concluídas</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cartao">
+        <h2>Tarefas por status</h2>
+        {% if total > 0 %}
+        <div class="grafico-linha">
+            <div class="grafico-box">
+                <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
+            </div>
+            <ul class="legenda">
+                <li class="status-pendente"><i></i><span>Pendente</span><b>{{ grafico[0] }}</b></li>
+                <li class="status-andamento"><i></i><span>Em andamento</span><b>{{ grafico[1] }}</b></li>
+                <li class="status-concluida"><i></i><span>Concluída</span><b>{{ grafico[2] }}</b></li>
+                <li class="status-cancelada"><i></i><span>Cancelada</span><b>{{ grafico[3] }}</b></li>
+            </ul>
+        </div>
+        {% else %}
+        <p class="text-secondary small mb-0">Nenhuma tarefa ainda para mostrar no gráfico.</p>
+        {% endif %}
+    </div>
+
+    <div class="cartao">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0">Categorias</h2>
+            <a href="{{ url_for('ver_categorias') }}" class="link-suave">Ver pastas</a>
+        </div>
+        {% for c in categorias[:4] %}
+            {% set qt = c.tarefas|length %}
+            {% set ok = c.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
+            <a class="cat-linha" href="{{ url_for('ver_categoria', categoria_id=c.id) }}">
+                <span class="cat-icone">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                </span>
+                <span class="cat-info">
+                    <span class="cat-topo"><span>{{ c.nome }}</span><small>{{ qt }} tarefa{{ '' if qt == 1 else 's' }}</small></span>
+                    <span class="barra d-block"><span class="d-block" style="height:100%; border-radius:5px; background:var(--cor-primaria); width: {{ ((ok * 100) / qt)|round|int if qt else 0 }}%"></span></span>
+                </span>
+            </a>
+        {% else %}
+            <p class="text-secondary small mb-0">Nenhuma categoria ainda. <a href="{{ url_for('ver_categorias') }}">Criar uma pasta</a>.</p>
         {% endfor %}
-
     </div>
-</div>
-{% endmacro %}
+</section>
 
+{% with busca_no_topo = true %}{% include '_filtros.html' %}{% endwith %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0">Quadro de Tarefas</h2>
-
-    <a
-        href="{{ url_for('adicionar_tarefa') }}"
-        class="btn btn-principal"
-    >
-        + Nova tarefa
-    </a>
-</div>
-
-{% include '_filtros.html' %}
-
-
-<div class="cartao mb-4">
-    <h6 class="fw-bold mb-3">Resumo das suas tarefas</h6>
-    {% if grafico|sum > 0 %}
-    <div style="position:relative; height:240px;">
-        <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
-    </div>
-    {% else %}
-    <p class="text-secondary small mb-0">Nenhuma tarefa ainda para mostrar no gráfico.</p>
-    {% endif %}
-</div>
-
-
-<h5 class="fw-semibold mb-3">
-    Atribuídas a você
-</h5>
-
-<div class="row g-3">
-
-    {{ coluna(
-        'Pendente',
-        atribuidas_a_mim|selectattr('status', 'equalto', 'Pendente')|list,
-        'status-pendente',
-        'de'
-    ) }}
-
-    {{ coluna(
-        'Em andamento',
-        atribuidas_a_mim|selectattr('status', 'equalto', 'Em andamento')|list,
-        'status-andamento',
-        'de'
-    ) }}
-
-    {{ coluna(
-        'Concluída',
-        atribuidas_a_mim|selectattr('status', 'equalto', 'Concluída')|list,
-        'status-concluida',
-        'de'
-    ) }}
-
-    {{ coluna(
-        'Cancelada',
-        atribuidas_a_mim|selectattr('status', 'equalto', 'Cancelada')|list,
-        'status-cancelada',
-        'de'
-    ) }}
-
-</div>
-
-
-<h5 class="fw-semibold mt-5 mb-3">
-    Atribuídas a outras pessoas
-</h5>
-
-{% if delegadas %}
-
+{% set colunas = [('Pendente', 'status-pendente', 'bg-info text-dark'), ('Em andamento', 'status-andamento', 'bg-warning text-dark'), ('Concluída', 'status-concluida', 'bg-success'), ('Cancelada', 'status-cancelada', 'bg-danger')] %}
 <div class="row g-3 mb-5">
+    {% for nome_status, classe_status, cor_badge in colunas %}
+    {% set lista = tarefas|selectattr('status', 'equalto', nome_status)|list %}
+    <div class="col-12 col-md-6 col-xl-3">
+        <div class="coluna {{ classe_status }}">
+            <div class="coluna-topo">
+                <span class="ponto"></span>
+                <h2>{{ nome_status }}</h2>
+                <span class="contador">{{ lista|length }}</span>
+            </div>
 
-    {{ coluna(
-        'Pendente',
-        delegadas|selectattr('status', 'equalto', 'Pendente')|list,
-        'status-pendente',
-        'para'
-    ) }}
+            {% for tarefa in lista %}
+            {% set atrasada = tarefa_atrasada(tarefa) %}
+            <div class="cartao-tarefa">
+                <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
+                     data-titulo="{{ tarefa.titulo }}"
+                     data-descricao="{{ tarefa.descricao or '' }}"
+                     data-status="{{ tarefa.status }}"
+                     data-cor="{{ cor_badge }}"
+                     data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                     data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
+                     data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
+                     data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
+                    <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
+                    {% if tarefa.descricao %}
+                        <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
+                    {% endif %}
+                    {% set prio = tarefa.prioridade or 'A definir' %}
+                    <div class="chips">
+                        <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+                        {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
+                        <span class="chip">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{{ tarefa.categoria.nome }}
+                        </span>
+                        {% endif %}
+                        {% if tarefa.prazo %}
+                        <span class="chip {{ 'chip-atrasada' if atrasada }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
 
-    {{ coluna(
-        'Em andamento',
-        delegadas|selectattr('status', 'equalto', 'Em andamento')|list,
-        'status-andamento',
-        'para'
-    ) }}
-
-    {{ coluna(
-        'Concluída',
-        delegadas|selectattr('status', 'equalto', 'Concluída')|list,
-        'status-concluida',
-        'para'
-    ) }}
-
-    {{ coluna(
-        'Cancelada',
-        delegadas|selectattr('status', 'equalto', 'Cancelada')|list,
-        'status-cancelada',
-        'para'
-    ) }}
-
+                <div class="acoes">
+                    {% if pode_mudar_status(tarefa) %}
+                    <form method="POST" action="{{ url_for('alterar_status', tarefa_id=tarefa.id) }}">
+                        <select name="status" class="form-select form-select-sm" aria-label="Alterar status" onchange="this.form.submit()">
+                            {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
+                            <option value="{{ s }}" {% if tarefa.status == s %}selected{% endif %}>{{ s }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% endif %}
+                    {% if tarefa.criador_id == current_user.id %}
+                    <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
+                        <select name="categoria_id" class="form-select form-select-sm" aria-label="Categoria" onchange="this.form.submit()">
+                            <option value="">Sem categoria</option>
+                            {% for c in categorias %}
+                            <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
+                        <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
+                              onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
+                            <button type="submit" class="btn btn-outline-danger">Excluir</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+                <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
 </div>
 
-{% else %}
-
-<p class="text-secondary mb-5">
-    Você ainda não atribuiu tarefas a outras pessoas.
-</p>
-
-{% endif %}
-
-
-<!-- Janela de detalhes -->
-
-<div
-    class="modal fade"
-    id="modalTarefa"
-    tabindex="-1"
-    aria-hidden="true"
->
+<!-- Janela de detalhes (somente leitura) -->
+<div class="modal fade" id="modalTarefa" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-
-        <div
-            class="modal-content"
-            style="border:0; border-radius:16px;"
-        >
-
+        <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-
-                <h5
-                    class="modal-title fw-bold"
-                    id="modalTitulo"
-                ></h5>
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                ></button>
-
+                <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-
             <div class="modal-body">
-
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <div class="text-secondary small text-uppercase mb-1">Status</div>
+                        <span id="modalStatus" class="badge rounded-pill"></span>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-secondary small text-uppercase mb-1">Prioridade</div>
+                        <p id="modalPrioridade" class="mb-0"></p>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-secondary small text-uppercase mb-1">Prazo</div>
+                        <p id="modalPrazo" class="mb-0"></p>
+                    </div>
+                </div>
                 <div class="mb-3">
-
-                    <div class="text-secondary small text-uppercase mb-1">
-                        Status
-                    </div>
-
-                    <span
-                        id="modalStatus"
-                        class="selo"
-                    ></span>
-
+                    <div class="text-secondary small text-uppercase mb-1">Categoria</div>
+                    <p id="modalCategoria" class="mb-0"></p>
                 </div>
-
-
-                <div class="mb-3">
-
-                    <div class="text-secondary small text-uppercase mb-1">
-                        Prazo
-                    </div>
-
-                    <div id="modalPrazo"></div>
-
+                <div>
+                    <div class="text-secondary small text-uppercase mb-1">Descrição</div>
+                    <p id="modalDescricao" class="mb-0" style="white-space:pre-wrap;"></p>
                 </div>
-
-
-                <div class="mb-3">
-
-                    <div class="text-secondary small text-uppercase mb-1">
-                        Prioridade
-                    </div>
-
-                    <div id="modalPrioridade">
-                        A definir
-                    </div>
-
-                </div>
-
-
-                <div class="mb-3">
-
-                    <div class="text-secondary small text-uppercase mb-1">
-                        Categoria
-                    </div>
-
-                    <p
-                        id="modalCategoria"
-                        class="mb-0"
-                    ></p>
-
-                </div>
-
-
-                <div class="mb-3">
-
-                    <div class="text-secondary small text-uppercase mb-1">
-                        Descrição
-                    </div>
-
-                    <p
-                        id="modalDescricao"
-                        class="mb-0"
-                        style="white-space:pre-wrap;"
-                    ></p>
-
-                </div>
-
-
-                <div class="row">
-
-                    <div class="col-6">
-
-                        <div class="text-secondary small text-uppercase mb-1">
-                            Criado por
-                        </div>
-
-                        <p
-                            id="modalCriado"
-                            class="mb-0"
-                        ></p>
-
-                    </div>
-
-                    <div class="col-6">
-
-                        <div class="text-secondary small text-uppercase mb-1">
-                            Responsável
-                        </div>
-
-                        <p
-                            id="modalCompartilhado"
-                            class="mb-0"
-                        ></p>
-
-                    </div>
-
-                </div>
-
             </div>
-
-
             <div class="modal-footer border-0 pt-0">
-
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    style="border-radius:10px;"
-                    data-bs-dismiss="modal"
-                >
-                    Fechar
-                </button>
-
-                <a
-                    id="modalEditar"
-                    href="#"
-                    class="btn btn-principal"
-                >
-                    Editar
-                </a>
-
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                <a id="modalEditar" href="#" class="btn btn-principal">Editar</a>
             </div>
-
         </div>
     </div>
 </div>
-
 
 <script>
-    document
-        .getElementById('modalTarefa')
-        .addEventListener('show.bs.modal', function (event) {
-
-            var d = event.relatedTarget.dataset;
-
-            document.getElementById('modalTitulo').textContent =
-                d.titulo;
-
-            document.getElementById('modalDescricao').textContent =
-                d.descricao || 'Sem descrição.';
-
-            document.getElementById('modalCriado').textContent =
-                d.criado || '—';
-
-            document.getElementById('modalCompartilhado').textContent =
-                d.compartilhado || '—';
-
-            document.getElementById('modalPrioridade').textContent =
-                d.prioridade || 'A definir';
-
-            document.getElementById('modalCategoria').textContent =
-                d.categoria || 'Sem categoria';
-
-
-            var status =
-                document.getElementById('modalStatus');
-
-            status.textContent = d.status;
-
-            status.className =
-                'selo ' + d.cor;
-
-
-            var prazo =
-                document.getElementById('modalPrazo');
-
-            prazo.textContent =
-                d.prazo || 'Sem prazo';
-
-            prazo.className =
-                d.atrasada === 'true'
-                    ? 'prazo-atrasado'
-                    : '';
-
-
-            if (d.atrasada === 'true') {
-                prazo.textContent += ' — Atrasada';
-            }
-
-
-            var editar =
-                document.getElementById('modalEditar');
-
-            editar.href = d.editar;
-
-            editar.textContent = d.rotulo;
-        });
+    document.getElementById('modalTarefa').addEventListener('show.bs.modal', function (event) {
+        var d = event.relatedTarget.dataset;
+        document.getElementById('modalTitulo').textContent = d.titulo;
+        document.getElementById('modalDescricao').textContent = d.descricao || 'Sem descrição.';
+        document.getElementById('modalPrioridade').textContent = d.prioridade || '—';
+        document.getElementById('modalPrazo').textContent = d.prazo || 'Sem prazo';
+        document.getElementById('modalCategoria').textContent = d.categoria || 'Sem categoria';
+        var status = document.getElementById('modalStatus');
+        status.textContent = d.status;
+        status.className = 'badge rounded-pill ' + d.cor;
+        document.getElementById('modalEditar').href = d.editar;
+    });
 </script>
 
-{% if grafico|sum > 0 %}
+{% if total > 0 %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
     var canvas = document.getElementById('graficoStatus');
     var valores = JSON.parse(canvas.dataset.valores);
+    var estilo = getComputedStyle(document.documentElement);
+    var cores = ['--status-pendente', '--status-andamento', '--status-concluida', '--status-cancelada']
+        .map(function (v) { return estilo.getPropertyValue(v).trim(); });
 
     new Chart(canvas, {
         type: 'doughnut',
         data: {
             labels: ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'],
-            datasets: [{
-                data: valores,
-                backgroundColor: ['#0dcaf0', '#ffc107', '#198754', '#dc3545'],
-                borderWidth: 2
-            }]
+            datasets: [{ data: valores, backgroundColor: cores, borderWidth: 0, hoverOffset: 4 }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
+            cutout: '66%',
+            plugins: { legend: { display: false } }
         }
     });
 </script>
