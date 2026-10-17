@@ -557,7 +557,7 @@ def perfil():
 
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
-        return redirect(url_for('perfil'))
+        return redirect(request.referrer or url_for('quadro'))
 
     return render_template('perfil.html')
 
