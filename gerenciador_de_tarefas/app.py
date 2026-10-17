@@ -1,12 +1,13 @@
 import secrets
 from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from extensions import db
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from werkzeug.utils import secure_filename
+from urllib.parse import quote
 
 # Configuração da pasta de upload de imagens de perfil
 UPLOAD_FOLDER = 'static/uploads'
@@ -26,6 +27,20 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # type: ignore
 
+# Cria função do link para google agenda
+def link_google_calendar(tarefa):
+    if not tarefa.prazo:
+        return "#"
+    inicio = tarefa.prazo.strftime('%Y%m%dT%H%M00')
+    fim = (tarefa.prazo + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
+    
+    titulo = quote(tarefa.titulo)
+    descricao = quote(tarefa.descricao or '')
+    
+    return f"https://calendar.google.com/calendar/render?action=TEMPLATE&text={titulo}&dates={inicio}/{fim}&details={descricao}"
+
+# Deixa a função disponível nos templates
+app.jinja_env.globals.update(link_google_calendar=link_google_calendar)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -369,6 +384,7 @@ def equipes():
     minhas = Equipe.query.filter_by(dono_id=current_user.id).all()
     participo = (Equipe.query.join(MembroEquipe, MembroEquipe.equipe_id == Equipe.id)).filter(MembroEquipe.usuario_id == current_user.id, Equipe.dono_id != current_user.id).all()
     return render_template('equipes.html', minhas=minhas, participo=participo)
+
 #criar equipe
 @app.route('/equipes/criar', methods=['POST'])
 @login_required
@@ -384,6 +400,7 @@ def criar_equipe():
     db.session.commit()
     flash('Equipe criada!', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
 #entrar equipe
 @app.route('/equipes/entrar', methods=['POST'])
 @login_required
@@ -400,6 +417,7 @@ def entrar_equipe():
     db.session.commit()
     flash(f'Você entrou na equipe "{equipe.nome}".', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
 #ver equipe
 @app.route('/equipes/<int:equipe_id>')
 @login_required
@@ -414,6 +432,7 @@ def ver_equipe(equipe_id):
                            grafico=contar_status(tarefas),
                            pessoas=[m.usuario for m in equipe.membros],
                            filtrando=filtro_ativo())
+
 #adicionar tarefa equipe
 @app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])
 @login_required
@@ -451,6 +470,7 @@ def adicionar_tarefa_equipe(equipe_id):
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
     return render_template('adicionar_tarefa_equipe.html', equipe=equipe, membros=membros, agora=datetime.now())
+
 #gerar codigo da equipe
 @app.route('/equipes/<int:equipe_id>/novo_codigo', methods=['POST'])
 @login_required
@@ -463,6 +483,7 @@ def novo_codigo_equipe(equipe_id):
     db.session.commit()
     flash('Novo código gerado. O anterior não vale mais.', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
 #remover usuario da equipe
 @app.route('/equipes/<int:equipe_id>/remover/<int:usuario_id>', methods=['POST'])
 @login_required
@@ -488,6 +509,7 @@ def remover_membro(equipe_id, usuario_id):
     db.session.commit()
     flash('Você saiu da equipe.' if sair else 'Membro removido.', 'success')
     return redirect(url_for('equipes') if sair else url_for('ver_equipe', equipe_id=equipe.id))
+
 #excluir equipe
 @app.route('/equipes/<int:equipe_id>/excluir', methods=['POST'])
 @login_required
@@ -568,6 +590,37 @@ def excluir_categoria(categoria_id):
     db.session.commit()
     flash('Categoria excluída. As tarefas ficaram sem categoria.', 'success')
     return redirect(url_for('ver_categorias'))
+
+# cria rota para gerar arquivo .ics
+@app.route('/tarefa/<int:tarefa_id>/exportar_ics')
+@login_required
+def exportar_ics(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+    
+    if tarefa.prazo:
+        inicio = tarefa.prazo.strftime('%Y%m%dT%H%M00')
+        fim = (tarefa.prazo + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
+    else:
+        inicio = datetime.now().strftime('%Y%m%dT%H%M00')
+        fim = (datetime.now() + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
+
+    conteudo_ics = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Gerenciador de Tarefas//PT
+BEGIN:VEVENT
+SUMMARY:{tarefa.titulo}
+DESCRIPTION:{tarefa.descricao or ''}
+DTSTART:{inicio}
+DTEND:{fim}
+STATUS:CONFIRMED
+END:VEVENT
+END:VCALENDAR"""
+
+    return Response(
+        conteudo_ics,
+        mimetype="text/calendar",
+        headers={"Content-disposition": f"attachment; filename=tarefa_{tarefa.id}.ics"}
+    )
 
 #definir categoria
 @app.route('/tarefas/<int:tarefa_id>/categoria', methods=['POST'])
