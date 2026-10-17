@@ -714,54 +714,149 @@ textarea.form-control { border-radius: 14px; }
 /* ==========================================================================
    Equipes (equipes.html). Prefixo eq-.
    ========================================================================== */
-.eq-secao { margin-bottom: 1.75rem; }
-.eq-secao-titulo { margin: 0 0 .25rem; font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; }
-.eq-secao-sub { margin: 0 0 1rem; color: var(--cor-suave); font-size: .9rem; }
-.eq-vazio { margin: 0; color: var(--cor-suave); font-size: .9rem; }
+.eq-topo { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.eq-subtitulo { margin: .35rem 0 0; color: var(--cor-suave); font-size: 1.02rem; }
 
 /* criar equipe / entrar com código */
-.eq-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: .85rem; }
-.eq-card-titulo { margin: 0 0 .2rem; font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; }
-.eq-card-sub { margin: 0 0 1.1rem; color: var(--cor-suave); font-size: .9rem; }
-.eq-form label { display: block; margin-bottom: .4rem; font-size: .85rem; font-weight: 600; }
-.eq-form-linha { display: flex; gap: 8px; }
-.eq-campo { position: relative; flex: 1; min-width: 0; }
-.eq-campo > svg {
-    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-    color: var(--cor-suave); pointer-events: none;
+.eq-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
+.eq-card {
+    position: relative; overflow: hidden; container-type: inline-size;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 1.4rem;
+    padding: 1.6rem;
+    background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: 20px;
 }
+.eq-card-destaque {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--cor-primaria) 16%, var(--cor-superficie)) 0%, var(--cor-superficie) 78%);
+    border-color: color-mix(in srgb, var(--cor-primaria) 38%, var(--cor-borda));
+}
+.eq-card-topo { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 1.1rem; }
+.eq-card-destaque .eq-card-topo { padding-right: 140px; }
+.eq-card-codigo .eq-card-topo { padding-right: 64px; }
+.eq-card-icone {
+    width: 60px; height: 60px; flex: none; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center; color: var(--cor-link);
+    background: color-mix(in srgb, var(--cor-primaria) 22%, var(--cor-superficie));
+    border: 1px solid color-mix(in srgb, var(--cor-primaria) 30%, transparent);
+}
+.eq-card-titulo { margin: 0 0 .35rem; font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; }
+.eq-card-sub { margin: 0; max-width: 34rem; color: var(--cor-suave); font-size: .92rem; line-height: 1.5; }
+.eq-deco { position: absolute; pointer-events: none; color: var(--cor-primaria); }
+.eq-deco-pessoas { right: 1.6rem; top: 1.3rem; width: 130px; fill: currentColor; opacity: .2; }
+.eq-deco-link { right: 1.8rem; top: 1.6rem; width: 56px; opacity: .25; }
+.eq-form { position: relative; z-index: 1; }
+.eq-form-linha { display: flex; gap: 10px; }
+.eq-campo { position: relative; flex: 1; min-width: 0; }
+.eq-campo > svg { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--cor-suave); pointer-events: none; }
 .eq-form .eq-input {
-    height: 46px; padding: 0 1rem 0 2.6rem; border-radius: 12px;
+    width: 100%; height: 50px; padding: 0 1rem 0 2.8rem; border-radius: 12px;
     background: var(--cor-fundo); border: 1px solid var(--cor-borda);
 }
-.eq-form .eq-input:focus { background: var(--cor-fundo); border-color: var(--cor-primaria); box-shadow: none; }
-.eq-form .btn { height: 46px; padding: 0 1.3rem; }
+.eq-form .eq-input:focus { background: var(--cor-fundo); border-color: var(--cor-primaria); }
+.eq-form .btn { display: inline-flex; align-items: center; justify-content: center; gap: .7rem; height: 50px; padding: 0 1.4rem; white-space: nowrap; }
+@container (max-width: 560px) {
+    .eq-deco { display: none; }
+    .eq-card-destaque .eq-card-topo, .eq-card-codigo .eq-card-topo { padding-right: 0; }
+}
 
-/* lista de equipes */
-.eq-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+/* seções */
+.eq-secao { margin-bottom: 32px; }
+.eq-secao-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.eq-secao-titulo { display: flex; align-items: center; gap: .7rem; margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -.02em; }
+.eq-secao-titulo svg { flex: none; color: var(--cor-link); }
+.eq-contagem {
+    padding: .3rem .8rem; border-radius: 10px; white-space: nowrap;
+    background: var(--cor-superficie-2); color: var(--cor-texto); font-size: .8rem; font-weight: 600;
+}
+
+/* cartões de equipe */
+.eq-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); gap: 16px; }
 .eq-equipe {
-    display: block; padding: 1.15rem 1.25rem;
-    background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: 18px;
+    display: flex; align-items: flex-start; gap: 16px; padding: 1.25rem;
+    background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: 20px;
     color: var(--cor-texto); text-decoration: none;
     transition: border-color .15s;
 }
-.eq-equipe:hover, .eq-equipe:focus-visible { color: var(--cor-texto); border-color: var(--cor-suave); }
+.eq-equipe:hover, .eq-equipe:focus-visible {
+    color: var(--cor-texto);
+    border-color: color-mix(in srgb, var(--cor-primaria) 55%, var(--cor-borda));
+}
+.eq-inicial {
+    width: 60px; height: 60px; flex: none; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700; color: var(--cor-link);
+    background: color-mix(in srgb, var(--cor-primaria) 22%, var(--cor-superficie));
+}
+.eq-equipe-corpo { flex: 1; min-width: 0; }
 .eq-equipe-nome { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; word-break: break-word; }
-.eq-equipe-meta { margin-top: .15rem; color: var(--cor-suave); font-size: .85rem; }
-.eq-acoes { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
-.eq-acao {
-    display: flex; align-items: center; gap: 10px; padding: .6rem .75rem;
-    background: var(--cor-superficie-2); border-radius: 12px; font-size: .9rem;
-}
-.eq-acao > svg { flex: none; color: var(--cor-link); }
-.eq-acao-texto { flex: 1; min-width: 0; }
+.eq-equipe-meta { display: flex; align-items: center; gap: .45rem; margin-top: .2rem; color: var(--cor-suave); font-size: .85rem; }
+.eq-equipe-meta svg { flex: none; }
+.eq-equipe-rodape { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: .8rem; }
+.eq-seta { flex: none; display: flex; color: var(--cor-suave); transition: color .15s, transform .15s; }
+.eq-equipe:hover .eq-seta { color: var(--cor-link); transform: translateX(2px); }
+.eq-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .eq-tag {
-    flex: none; padding: .2rem .6rem; border-radius: 50rem;
-    font-size: .75rem; font-weight: 600; white-space: nowrap;
-    color: color-mix(in srgb, var(--st) 65%, var(--cor-texto));
-    background: color-mix(in srgb, var(--st) 16%, transparent);
+    padding: .2rem .65rem; border-radius: 50rem; white-space: nowrap;
+    font-size: .75rem; font-weight: 600;
+    color: color-mix(in srgb, var(--st, var(--cor-primaria)) 65%, var(--cor-texto));
+    background: color-mix(in srgb, var(--st, var(--cor-primaria)) 16%, transparent);
 }
+
+/* estado vazio */
+.eq-vazio {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 2rem 1.5rem; text-align: center;
+    border: 1px dashed var(--cor-borda); border-radius: 20px;
+}
+.eq-vazio-icone {
+    width: 64px; height: 64px; margin-bottom: .9rem; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center; color: var(--cor-link);
+    background: color-mix(in srgb, var(--cor-primaria) 18%, var(--cor-superficie));
+}
+.eq-vazio-titulo { margin: 0 0 .25rem; font-size: 1rem; font-weight: 700; }
+.eq-vazio p { margin: 0; color: var(--cor-suave); font-size: .9rem; }
 
 @media (max-width: 800px) {
     .eq-duplo { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .eq-form-linha { flex-direction: column; }
+    .eq-form .btn { width: 100%; }
+}
+
+/* ==========================================================================
+   Equipe (página da equipe, equipe.html). Prefixo eqp-.
+   Reaproveita .eq-inicial, .eq-tag e .eq-contagem da seção Equipes, e
+   .coluna, .cartao-tarefa, .chip, .legenda do quadro.
+   ========================================================================== */
+.eqp-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.eqp-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.eqp-id h1 { margin: 0; font-size: 1.85rem; font-weight: 700; letter-spacing: -.03em; word-break: break-word; }
+.eqp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .3rem; color: var(--cor-suave); font-size: .9rem; }
+.eqp-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.eqp-acoes form { margin: 0; }
+.eqp-acoes .btn { display: inline-flex; align-items: center; gap: .5rem; }
+
+/* resumo */
+.eqp-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-bottom: 24px; }
+.eqp-card-titulo { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.eqp-card-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 1rem; }
+.eqp-card-cab .eqp-card-titulo { margin: 0; }
+.eqp-resumo .grafico-box .anel-centro { pointer-events: none; }
+.eqp-membros { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
+.eqp-membro { display: flex; align-items: center; gap: 12px; padding: .6rem 0; }
+.eqp-membro:first-child { padding-top: 0; }
+.eqp-membro + .eqp-membro { border-top: 1px solid var(--cor-borda); }
+.eqp-membro form { margin: 0; }
+.eqp-membro-nome { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eqp-codigo-linha { margin-bottom: .7rem; }
+.eqp-codigo-linha .codigo-acesso { font-size: 1.5rem; padding: .5rem 1.2rem; border-radius: 14px; }
+.eqp-ajuda { margin: 0; color: var(--cor-suave); font-size: .85rem; }
+.eqp-resumo .btn-sm { display: inline-flex; align-items: center; gap: .45rem; }
+
+/* responsável no cartão de tarefa */
+.chip-pessoa .mini {
+    width: 16px; height: 16px; flex: none; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .6rem; font-weight: 700;
+    background: var(--cor-primaria); color: var(--cor-sobre-primaria);
 }
