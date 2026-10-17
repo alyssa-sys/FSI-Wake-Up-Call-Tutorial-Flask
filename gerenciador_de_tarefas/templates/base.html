@@ -408,6 +408,60 @@
         </div>
     </div>
 
+    <!-- Modal / Pop-up de Atribuir Tarefa para Equipe -->
+    <div class="modal fade" id="modalAtribuirTarefaEquipe" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-light" style="background-color: var(--bs-body-bg, #1a1a1a); border: 1px solid var(--bs-border-color, #333); border-radius: 16px;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold mb-0" id="modalEquipeTitulo">Atribuir Tarefa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                
+                <form id="formAtribuirEquipe" method="POST">
+                    <div class="modal-body py-4">
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary" for="eqTitulo">Título</label>
+                            <input type="text" id="eqTitulo" name="titulo" class="form-control bg-dark text-light border-secondary" placeholder="O que precisa ser feito?" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary" for="eqDescricao">Descrição</label>
+                            <textarea id="eqDescricao" name="descricao" class="form-control bg-dark text-light border-secondary" rows="3" placeholder="Detalhes adicionais (opcional)"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small text-secondary" for="eqResponsavel">Responsável</label>
+                            <select id="eqResponsavel" name="responsavel_id" class="form-select bg-dark text-light border-secondary" required>
+                                <option value="" selected disabled>Escolha um membro</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="eqPrioridade">Prioridade</label>
+                                <select id="eqPrioridade" name="prioridade" class="form-select bg-dark text-light border-secondary">
+                                    <option value="Baixa">Baixa</option>
+                                    <option value="Média" selected>Média</option>
+                                    <option value="Alta">Alta</option>
+                                    <option value="A definir">A definir</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="eqPrazo">Prazo</label>
+                                <input type="text" id="eqPrazoEquipe" name="prazo" class="form-control bg-dark text-light border-secondary" placeholder="dd/mm/aaaa hh:mm" autocomplete="off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top border-secondary d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal" style="border-radius:8px;">Cancelar</button>
+                        <button type="submit" class="btn btn-principal btn-sm px-3" style="border-radius:8px;">Atribuir Tarefa</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts do Flatpickr -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
@@ -439,6 +493,63 @@
                   formTarefa.addEventListener("submit", function () {
                       if (inputPrazo.value === valorInicialPadrao) {
                           inputPrazo.value = ""; 
+                      }
+                  });
+              }
+          }
+      });
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          const inputPrazoEquipe = document.getElementById("eqPrazoEquipe");
+          let fpEquipe = null;
+          let valorInicialPadraoEquipe = "";
+
+          if (inputPrazoEquipe) {
+              fpEquipe = flatpickr(inputPrazoEquipe, {
+                  enableTime: true,
+                  dateFormat: "d/m/Y H:i",
+                  time_24hr: true,
+                  locale: "pt",
+                  allowInput: true
+              });
+
+              const modalEl = document.getElementById("modalAtribuirTarefaEquipe");
+              if (modalEl) {
+                  modalEl.addEventListener("show.bs.modal", function (event) {
+                      const button = event.relatedTarget;
+                      if (!button) return;
+
+                      // Configura a rota do form e o título
+                      document.getElementById("formAtribuirEquipe").action = button.dataset.action;
+                      document.getElementById("modalEquipeTitulo").textContent = "Atribuir Tarefa - " + button.dataset.equipeNome;
+
+                      // Preenche o select de responsáveis com os dados injetados via JSON no botão
+                      const selectResp = document.getElementById("eqResponsavel");
+                      selectResp.innerHTML = '<option value="" selected disabled>Escolha um membro</option>';
+                      
+                      try {
+                          const membros = JSON.parse(button.dataset.membros || "[]");
+                          membros.forEach(m => {
+                              const opt = document.createElement("option");
+                              opt.value = m.id;
+                              opt.textContent = m.nome;
+                              selectResp.appendChild(opt);
+                          });
+                      } catch(e) {}
+
+                      // Seta data atual no Flatpickr
+                      fpEquipe.setDate(new Date(), true);
+                      valorInicialPadraoEquipe = inputPrazoEquipe.value;
+                  });
+              }
+
+              const formEquipe = document.getElementById("formAtribuirEquipe");
+              if (formEquipe) {
+                  formEquipe.addEventListener("submit", function () {
+                      if (inputPrazoEquipe.value === valorInicialPadraoEquipe) {
+                          inputPrazo.value = ""; // Salva sem prazo se não alterado
                       }
                   });
               }

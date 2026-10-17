@@ -43,7 +43,19 @@
     <div class="eqp-acoes">
         <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary">{{ ico('back', 16) }} Voltar para Equipes</a>
         {% if dono %}
-        <a href="{{ url_for('adicionar_tarefa_equipe', equipe_id=equipe.id) }}" class="btn btn-principal">{{ ico('plus', 16) }} Atribuir tarefa</a>
+        {% set membros_json = [] %}
+        {% for m in membros %}
+            {% set _ = membros_json.append({'id': m.usuario.id, 'nome': m.usuario.nomeUsuario}) %}
+        {% endfor %}
+
+        <button type="button" class="btn btn-principal" 
+                data-bs-toggle="modal" 
+                data-bs-target="#modalAtribuirTarefaEquipe"
+                data-action="{{ url_for('adicionar_tarefa_equipe', equipe_id=equipe.id) }}"
+                data-equipe-nome="{{ equipe.nome }}"
+                data-membros='{{ membros_json | tojson }}'>
+            {{ ico('plus', 16) }} Atribuir tarefa
+        </button>
         <form method="POST" action="{{ url_for('excluir_equipe', equipe_id=equipe.id) }}"
               onsubmit="return confirm('Excluir a equipe, todas as tarefas e remover os membros? Isso não pode ser desfeito.');">
             <button type="submit" class="btn btn-outline-danger">{{ ico('trash', 16) }} Excluir equipe</button>
