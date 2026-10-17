@@ -831,27 +831,47 @@ textarea.form-control { border-radius: 14px; }
 .eqp-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .eqp-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .eqp-id h1 { margin: 0; font-size: 1.85rem; font-weight: 700; letter-spacing: -.03em; word-break: break-word; }
-.eqp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .3rem; color: var(--cor-suave); font-size: .9rem; }
+.eqp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .35rem; color: var(--cor-suave); font-size: .9rem; }
 .eqp-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .eqp-acoes form { margin: 0; }
-.eqp-acoes .btn { display: inline-flex; align-items: center; gap: .5rem; }
+.eqp-acoes .btn { display: inline-flex; align-items: center; gap: .55rem; }
+.eqp-acoes .btn-outline-secondary { background: transparent; border: 1px solid var(--cor-borda); }
+.eqp-acoes .btn-outline-secondary:hover { background: var(--cor-superficie-2); border-color: var(--cor-borda); }
 
 /* resumo */
 .eqp-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-bottom: 24px; }
-.eqp-card-titulo { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.eqp-card-titulo { display: flex; align-items: center; gap: .7rem; margin: 0 0 1rem; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.eqp-card-titulo svg { flex: none; color: var(--cor-link); }
 .eqp-card-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 1rem; }
 .eqp-card-cab .eqp-card-titulo { margin: 0; }
+.eqp-ajuda { margin: 0; color: var(--cor-suave); font-size: .9rem; }
 .eqp-resumo .grafico-box .anel-centro { pointer-events: none; }
+.eqp-progresso { display: flex; align-items: center; gap: 14px; margin-top: 1.1rem; }
+.eqp-progresso .barra { flex: 1; height: 10px; border-radius: 10px; }
+.eqp-progresso span { min-width: 2.6em; text-align: right; color: var(--cor-suave); font-size: .85rem; font-weight: 600; }
+
 .eqp-membros { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
 .eqp-membro { display: flex; align-items: center; gap: 12px; padding: .6rem 0; }
 .eqp-membro:first-child { padding-top: 0; }
 .eqp-membro + .eqp-membro { border-top: 1px solid var(--cor-borda); }
 .eqp-membro form { margin: 0; }
+.eqp-membro .usuario-foto { width: 44px; height: 44px; font-size: 1.1rem; }
 .eqp-membro-nome { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eqp-codigo-linha { margin-bottom: .7rem; }
-.eqp-codigo-linha .codigo-acesso { font-size: 1.5rem; padding: .5rem 1.2rem; border-radius: 14px; }
-.eqp-ajuda { margin: 0; color: var(--cor-suave); font-size: .85rem; }
-.eqp-resumo .btn-sm { display: inline-flex; align-items: center; gap: .45rem; }
+
+.eqp-codigo { margin-bottom: .7rem; padding: .7rem 1.1rem; border: 1px solid var(--cor-borda); border-radius: 14px; background: var(--cor-fundo); }
+.eqp-codigo .codigo-acesso { padding: 0; border-radius: 0; background: none; font-size: 1.5rem; font-weight: 600; letter-spacing: .08em; }
+.eqp-resumo .btn-sm { display: inline-flex; align-items: center; gap: .5rem; }
+.eqp-contorno { background: transparent; border: 1px solid var(--cor-borda); }
+.eqp-contorno:hover { background: var(--cor-superficie-2); border-color: var(--cor-borda); }
+
+/* colunas do quadro da equipe */
+.eqp-coluna { min-height: 270px; background: var(--cor-superficie); border: 1px solid var(--cor-borda); }
+.eqp-coluna .contador { padding: 0; background: none; color: var(--cor-suave); font-size: .9rem; font-weight: 500; }
+.eqp-coluna .cartao-tarefa { background: var(--cor-superficie-2); }
+.eqp-vazio-col { display: flex; flex-direction: column; align-items: center; padding: 2rem .75rem 1.5rem; text-align: center; color: var(--cor-suave); }
+.eqp-vazio-col svg { margin-bottom: 1rem; stroke-width: 1.4; opacity: .75; }
+.eqp-vazio-col strong { color: var(--cor-texto); font-size: .9rem; font-weight: 600; }
+.eqp-vazio-col p { margin: .35rem 0 0; max-width: 15rem; font-size: .8rem; line-height: 1.5; }
 
 /* responsável no cartão de tarefa */
 .chip-pessoa .mini {

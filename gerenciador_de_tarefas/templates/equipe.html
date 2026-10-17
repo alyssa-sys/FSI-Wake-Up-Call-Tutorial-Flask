@@ -7,10 +7,17 @@
 {% macro ico(nome, t=18) -%}
 <svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 {%- if nome == 'users' %}<path d="M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-1.5a3.5 3.5 0 00-2.5-3.3M15.5 4.2a3.5 3.5 0 010 6.6"/>
-{%- elif nome == 'key' %}<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/>
 {%- elif nome == 'plus' %}<path d="M12 5v14M5 12h14"/>
 {%- elif nome == 'back' %}<path d="M19 12H5M11 6l-6 6 6 6"/>
+{%- elif nome == 'trash' %}<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/>
+{%- elif nome == 'sair' %}<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+{%- elif nome == 'bars' %}<path d="M4 20v-6M10 20V6M16 20v-9M22 20H2"/>
+{%- elif nome == 'lock' %}<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>
+{%- elif nome == 'refresh' %}<path d="M20 11a8 8 0 00-14.5-3.5L4 9M4 4v5h5M4 13a8 8 0 0014.5 3.5L20 15M20 20v-5h-5"/>
 {%- elif nome == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{%- elif nome == 'prancheta' %}<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>
+{%- elif nome == 'check' %}<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>
+{%- elif nome == 'x' %}<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>
 {%- endif %}</svg>
 {%- endmacro %}
 
@@ -27,24 +34,24 @@
             <h1>{{ equipe.nome }}</h1>
             <div class="eqp-meta">
                 <span>Criada por {{ equipe.dono.nomeUsuario }}</span>
-                <span>·</span>
+                <span aria-hidden="true">•</span>
                 <span>{{ n_membros }} membro{{ '' if n_membros == 1 else 's' }}</span>
                 <span class="eq-tag">{{ 'Criador' if dono else 'Membro' }}</span>
             </div>
         </div>
     </div>
     <div class="eqp-acoes">
-        <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary">{{ ico('back', 16) }} Equipes</a>
+        <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary">{{ ico('back', 16) }} Voltar para Equipes</a>
         {% if dono %}
         <a href="{{ url_for('adicionar_tarefa_equipe', equipe_id=equipe.id) }}" class="btn btn-principal">{{ ico('plus', 16) }} Atribuir tarefa</a>
         <form method="POST" action="{{ url_for('excluir_equipe', equipe_id=equipe.id) }}"
               onsubmit="return confirm('Excluir a equipe, todas as tarefas e remover os membros? Isso não pode ser desfeito.');">
-            <button type="submit" class="btn btn-outline-danger">Excluir equipe</button>
+            <button type="submit" class="btn btn-outline-danger">{{ ico('trash', 16) }} Excluir equipe</button>
         </form>
         {% else %}
         <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=current_user.id) }}"
               onsubmit="return confirm('Sair da equipe? Suas tarefas não concluídas serão canceladas.');">
-            <button type="submit" class="btn btn-outline-danger">Sair da equipe</button>
+            <button type="submit" class="btn btn-outline-danger">{{ ico('sair', 16) }} Sair da equipe</button>
         </form>
         {% endif %}
     </div>
@@ -54,12 +61,12 @@
 <section class="eqp-resumo">
 
     <div class="cartao">
-        <h2 class="eqp-card-titulo">Andamento da equipe</h2>
+        <h2 class="eqp-card-titulo">{{ ico('bars', 22) }} Andamento da equipe</h2>
         {% if total > 0 %}
         <div class="grafico-linha">
-            <div class="grafico-box" role="img" aria-label="{{ pct }}% das tarefas concluídas">
+            <div class="grafico-box" role="img" aria-label="{{ total }} tarefa{{ '' if total == 1 else 's' }} no total">
                 <canvas id="graficoStatus" data-valores='{{ grafico|tojson }}'></canvas>
-                <div class="anel-centro"><b>{{ pct }}%</b><span>concluídas</span></div>
+                <div class="anel-centro"><b>{{ total }}</b><span>tarefa{{ '' if total == 1 else 's' }}</span></div>
             </div>
             <ul class="legenda">
                 <li class="status-pendente"><i></i><span>Pendente</span><b>{{ grafico[0] }}</b></li>
@@ -69,13 +76,17 @@
             </ul>
         </div>
         {% else %}
-        <p class="text-secondary small mb-0">Nenhuma tarefa atribuída ainda.</p>
+        <p class="eqp-ajuda">Nenhuma tarefa atribuída ainda.</p>
         {% endif %}
+        <div class="eqp-progresso" role="progressbar" aria-label="Tarefas concluídas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}">
+            <div class="barra"><div style="width: {{ pct }}%"></div></div>
+            <span>{{ pct }}%</span>
+        </div>
     </div>
 
     <div class="cartao">
         <div class="eqp-card-cab">
-            <h2 class="eqp-card-titulo">Membros</h2>
+            <h2 class="eqp-card-titulo">{{ ico('users', 22) }} Membros</h2>
             <span class="eq-contagem">{{ n_membros }}</span>
         </div>
         <div class="eqp-membros">
@@ -101,14 +112,12 @@
 
     {% if dono %}
     <div class="cartao">
-        <h2 class="eqp-card-titulo">Código de acesso</h2>
-        <div class="eqp-codigo-linha">
-            <span class="codigo-acesso">{{ equipe.codigo_acesso }}</span>
-        </div>
+        <h2 class="eqp-card-titulo">{{ ico('lock', 22) }} Código de acesso</h2>
+        <div class="eqp-codigo"><span class="codigo-acesso">{{ equipe.codigo_acesso }}</span></div>
         <p class="eqp-ajuda">Passe esse código para quem deve entrar na equipe.</p>
         <form method="POST" action="{{ url_for('novo_codigo_equipe', equipe_id=equipe.id) }}" class="mt-3"
               onsubmit="return confirm('O código atual deixará de funcionar. Continuar?');">
-            <button type="submit" class="btn btn-outline-secondary btn-sm">{{ ico('key', 14) }} Gerar novo código</button>
+            <button type="submit" class="btn btn-outline-secondary btn-sm eqp-contorno">{{ ico('refresh', 15) }} Gerar novo código</button>
         </form>
     </div>
     {% endif %}
@@ -116,12 +125,17 @@
 </section>
 
 {# ---------- Quadro por status ---------- #}
-{% set colunas = [('Pendente', 'status-pendente'), ('Em andamento', 'status-andamento'), ('Concluída', 'status-concluida'), ('Cancelada', 'status-cancelada')] %}
+{% set colunas = [
+    ('Pendente', 'status-pendente', 'prancheta', 'As tarefas que ainda não foram iniciadas aparecerão aqui.'),
+    ('Em andamento', 'status-andamento', 'clock', 'As tarefas em progresso aparecerão aqui.'),
+    ('Concluída', 'status-concluida', 'check', 'As tarefas concluídas aparecerão aqui.'),
+    ('Cancelada', 'status-cancelada', 'x', 'As tarefas canceladas aparecerão aqui.')
+] %}
 <div class="row g-3 mb-5">
-    {% for nome_status, classe_status in colunas %}
+    {% for nome_status, classe_status, icone_vazio, texto_vazio in colunas %}
     {% set lista = tarefas|selectattr('status', 'equalto', nome_status)|list %}
     <div class="col-12 col-md-6 col-xl-3">
-        <div class="coluna {{ classe_status }}">
+        <div class="coluna eqp-coluna {{ classe_status }}">
             <div class="coluna-topo">
                 <span class="ponto"></span>
                 <h2>{{ nome_status }}</h2>
@@ -168,7 +182,11 @@
                 {% endif %}
             </div>
             {% else %}
-            <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
+            <div class="eqp-vazio-col">
+                {{ ico(icone_vazio, 48) }}
+                <strong>Nenhuma tarefa</strong>
+                <p>{{ texto_vazio }}</p>
+            </div>
             {% endfor %}
         </div>
     </div>
