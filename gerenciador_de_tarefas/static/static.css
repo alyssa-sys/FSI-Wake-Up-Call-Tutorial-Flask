@@ -936,3 +936,41 @@ textarea.form-control { border-radius: 14px; }
 .cat-sem { border-style: dashed; }
 .cat-sem:hover { border-color: var(--cor-suave); }
 .cat-sem-icone { color: var(--cor-suave); background: var(--cor-superficie-2); }
+
+/* ==========================================================================
+   Categoria (categoria.html). Prefixo cat- (continua a seção Categorias).
+   Reaproveita .eqp-topo/.eqp-id/.eqp-acoes, .eq-inicial, .eq-contagem,
+   .cartao-tarefa, .chip, .selo e os estados .status-* do quadro.
+   ========================================================================== */
+.cat-tarefas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 16px; margin-bottom: 36px; }
+.cat-tarefas .cartao-tarefa { margin-bottom: 0; }
+.cat-tarefa { display: flex; flex-direction: column; padding: 1.1rem; border-radius: 16px; }
+.cat-tarefa-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.cat-tarefa-topo .selo { flex: none; }
+.cat-tarefa .tarefa-desc { margin-top: .35rem; }
+.cat-tarefa-acoes {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: auto; padding-top: .9rem;
+}
+.cat-tarefa .chips { margin-bottom: .9rem; }
+.cat-tarefa-acoes { border-top: 1px solid var(--cor-borda); }
+.cat-tarefa-acoes form { margin: 0; }
+.cat-tarefa-acoes .btn-outline-secondary { background: transparent; border: 1px solid var(--cor-borda); }
+.cat-tarefa-acoes .btn-outline-secondary:hover { background: var(--cor-superficie-2); border-color: var(--cor-borda); }
+
+/* adicionar tarefas existentes */
+.cat-existentes .eq-secao-cab { margin-bottom: .4rem; }
+.cat-linhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; margin-top: 1.1rem; }
+.cat-linha {
+    display: flex; align-items: center; gap: 12px; margin: 0; padding: .8rem .95rem;
+    background: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 12px;
+    cursor: pointer; transition: border-color .15s, background-color .15s;
+}
+.cat-linha:hover { border-color: var(--cor-suave); }
+.cat-linha:has(.form-check-input:checked) {
+    border-color: color-mix(in srgb, var(--cor-primaria) 55%, var(--cor-borda));
+    background: color-mix(in srgb, var(--cor-primaria) 8%, var(--cor-fundo));
+}
+.cat-linha .form-check-input { flex: none; width: 20px; height: 20px; margin: 0; cursor: pointer; }
+.cat-linha-em { color: var(--cor-suave); font-size: .8rem; }
+.cat-adicionar { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.25rem; }
