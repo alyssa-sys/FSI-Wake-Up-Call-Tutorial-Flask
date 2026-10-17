@@ -27,6 +27,10 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # type: ignore
 
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(Usuario, int(user_id))
+
 # Cria função do link para google agenda
 def link_google_calendar(tarefa):
     if not tarefa.prazo:
@@ -42,9 +46,11 @@ def link_google_calendar(tarefa):
 # Deixa a função disponível nos templates
 app.jinja_env.globals.update(link_google_calendar=link_google_calendar)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(Usuario, int(user_id))
+@app.context_processor
+def injetar_categorias_globais():
+    if current_user.is_authenticated:
+        return dict(categorias_globais=categorias_do_usuario())
+    return dict(categorias_globais=[])
 
 
 def validar_prazo(valor):
@@ -224,6 +230,7 @@ def login():
             flash('Usuário/e-mail ou senha incorretos.', 'danger')
 
     return render_template('login.html')
+
 #admin
 @app.route('/admin')
 @login_required
@@ -235,7 +242,7 @@ def admin_dashboard():
     tarefas = Tarefa.query.all()
     return render_template('quadro_admin.html', tarefas = tarefas)
 
-#adicionar tarefa
+#adicionar tarefa via modal
 STATUS_VALIDOS = ['Pendente', 'Em andamento', 'Concluída', 'Cancelada']
 PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
 
@@ -243,40 +250,46 @@ PRIORIDADES_VALIDAS = ['Alta', 'Média', 'Baixa', 'A definir']
 @login_required
 def adicionar_tarefa():
     if request.method == 'POST':
-        titulo = request.form['titulo'].strip()
-        descricao = request.form['descricao'].strip()
-        titulo = request.form['titulo'].strip()
-        descricao = request.form['descricao'].strip()
+        titulo = request.form.get('titulo', '').strip()
+        descricao = request.form.get('descricao', '').strip()
         status = 'Pendente'
-
         prioridade = request.form.get('prioridade', 'A definir')
+
+        if not titulo:
+            flash('O título da tarefa é obrigatório.', 'danger')
+            return redirect(request.referrer or url_for('quadro'))
 
         if prioridade not in PRIORIDADES_VALIDAS:
             flash('Prioridade inválida.', 'danger')
-            return redirect(url_for('adicionar_tarefa'))
+            return redirect(request.referrer or url_for('quadro'))
 
         try:
             prazo = validar_prazo(request.form.get('prazo'))
         except ValueError as e:
             flash(str(e), 'danger')
-            return redirect(url_for('adicionar_tarefa'))
+            return redirect(request.referrer or url_for('quadro'))
 
         responsavel_id = current_user.id
-
         categoria_id = categoria_valida(request.form.get('categoria_id'))
 
-        nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status=status, prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id, categoria_id=categoria_id) # type: ignore
+        nova_tarefa = Tarefa(
+            titulo=titulo, 
+            descricao=descricao, 
+            status=status, 
+            prioridade=prioridade, 
+            prazo=prazo, 
+            criador_id=current_user.id, 
+            responsavel_id=responsavel_id, 
+            categoria_id=categoria_id
+        )
 
         db.session.add(nova_tarefa)
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
-        if categoria_id:
-            return redirect(url_for('ver_categoria', categoria_id=categoria_id))
-        return voltar_para_lista()
+        return redirect(request.referrer or url_for('quadro'))
 
-    return render_template('adicionar_tarefa.html', categorias=categorias_do_usuario(),
-                           categoria_pre=request.args.get('categoria', type=int), agora=datetime.now())
+    return redirect(request.referrer or url_for('quadro'))
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['GET', 'POST'])
