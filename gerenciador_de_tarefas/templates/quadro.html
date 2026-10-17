@@ -141,7 +141,6 @@
                     </div>
                 </div>
 
-<<<<<<< HEAD
                 <div class="d-flex gap-1 mt-2">
                     <a href="{{ url_for('exportar_ics', tarefa_id=tarefa.id) }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;" title="Baixar iCal (.ics) para Apple/iCloud">
                         📅 iCal
@@ -154,28 +153,6 @@
                 </div>
 
                 <div class="acoes mt-3">
-=======
-                <div class="acoes">
-                    {% if pode_mudar_status(tarefa) %}
-                    <form method="POST" action="{{ url_for('alterar_status', tarefa_id=tarefa.id) }}">
-                        <select name="status" class="form-select form-select-sm" aria-label="Alterar status" onchange="this.form.submit()">
-                            {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
-                            <option value="{{ s }}" {% if tarefa.status == s %}selected{% endif %}>{{ s }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                    {% endif %}
->>>>>>> origin/html-atualizado
-                    {% if tarefa.criador_id == current_user.id %}
-                    <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
-                        <select name="categoria_id" class="form-select form-select-sm" aria-label="Categoria" onchange="this.form.submit()">
-                            <option value="">Sem categoria</option>
-                            {% for c in categorias %}
-                            <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>{{ c.nome }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                    {% endif %}
                     <div class="d-flex gap-2">
                         <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal">Editar</a>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
