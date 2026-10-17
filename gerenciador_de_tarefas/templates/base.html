@@ -219,6 +219,7 @@
         aplicar();
       })();
     </script>
+    
     <!-- Modal / Pop-up de Perfil -->
     <div class="modal fade" id="modalPerfil" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -265,7 +266,6 @@
                     </div>
 
                     <div class="modal-footer border-top border-secondary d-flex justify-content-between align-items-center">
-                        <!-- Botão Sair dentro do modal com o mesmo ícone e identidade visual do menu -->
                         <a href="{{ url_for('logout') }}" class="text-danger text-decoration-none d-flex align-items-center gap-2 px-2 py-1 rounded" style="font-size: 0.9rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(220,53,69,0.1)'" onmouseout="this.style.background='transparent'">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 17l-5-5 5-5M5 12h11"/></svg>
                             <span>Sair</span>
@@ -280,6 +280,7 @@
             </div>
         </div>
     </div>
+
     <!-- Modal / Pop-up de Adicionar Tarefa -->
     <div class="modal fade" id="modalAdicionarTarefa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -338,43 +339,7 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", function () {
-          const inputPrazo = document.getElementById("modalPrazoTarefa");
-          const formTarefa = inputPrazo ? inputPrazo.closest("form") : null;
-          let valorInicialPadrao = "";
-          
-          if (inputPrazo) {
-              const fp = flatpickr(inputPrazo, {
-                  enableTime: true,
-                  dateFormat: "d/m/Y H:i",
-                  time_24hr: true,
-                  locale: "pt",
-                  allowInput: true
-              });
-
-              const modalElement = document.getElementById("modalAdicionarTarefa");
-              if (modalElement) {
-                  modalElement.addEventListener("show.bs.modal", function () {
-                      fp.setDate(new Date(), true);
-                      valorInicialPadrao = inputPrazo.value; // Salva o valor gerado ao abrir
-                  });
-              }
-
-              // Se enviar sem alterar o valor padrão gerado, limpa para salvar sem prazo
-              if (formTarefa) {
-                  formTarefa.addEventListener("submit", function () {
-                      if (inputPrazo.value === valorInicialPadrao) {
-                          inputPrazo.value = ""; 
-                      }
-                  });
-              }
-          }
-      });
-    </script>
     <!-- Modal / Pop-up de Editar Tarefa -->
     <div class="modal fade" id="modalEditarTarefa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -442,5 +407,43 @@
             </div>
         </div>
     </div>
+
+    <!-- Scripts do Flatpickr -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          const inputPrazo = document.getElementById("modalPrazoTarefa");
+          const formTarefa = inputPrazo ? inputPrazo.closest("form") : null;
+          let valorInicialPadrao = "";
+          
+          if (inputPrazo) {
+              const fp = flatpickr(inputPrazo, {
+                  enableTime: true,
+                  dateFormat: "d/m/Y H:i",
+                  time_24hr: true,
+                  locale: "pt",
+                  allowInput: true
+              });
+
+              const modalElement = document.getElementById("modalAdicionarTarefa");
+              if (modalElement) {
+                  modalElement.addEventListener("show.bs.modal", function () {
+                      fp.setDate(new Date(), true);
+                      valorInicialPadrao = inputPrazo.value;
+                  });
+              }
+
+              if (formTarefa) {
+                  formTarefa.addEventListener("submit", function () {
+                      if (inputPrazo.value === valorInicialPadrao) {
+                          inputPrazo.value = ""; 
+                      }
+                  });
+              }
+          }
+      });
+    </script>
   </body>
 </html>
