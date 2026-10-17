@@ -508,30 +508,30 @@ def excluir_equipe(equipe_id):
 def perfil():
     if request.method == 'POST':
         current_user.nome = request.form.get('nome', '').strip()
-        novo_email = request.form.get('email', '').strip().lower()
+        novo_nome_usuario = request.form.get('nomeUsuario', '').strip()
         
-        if novo_email != current_user.email:
-            if Usuario.query.filter_by(email=novo_email).first():
-                flash('Este e-mail já está em uso por outro usuário.', 'danger')
-                return redirect(url_for('perfil'))
-            current_user.email = novo_email
+        # Valiza se o nome de usuário foi preenchido
+        if not novo_nome_usuario:
+            flash('O nome de usuário não pode ficar vazio.', 'danger')
+            return redirect(url_for('perfil'))
 
-        # Tratamento do arquivo de imagem
+        # Se o usuário alterou o nome de usuário, verifica se já existe no banco
+        if novo_nome_usuario != current_user.nomeUsuario:
+            usuario_existente = Usuario.query.filter_by(nomeUsuario=novo_nome_usuario).first()
+            if usuario_existente:
+                flash('Este nome de usuário já está em uso por outro usuário.', 'danger')
+                return redirect(url_for('perfil'))
+            current_user.nomeUsuario = novo_nome_usuario
+
+        # Tratamento de upload da foto de perfil (mantém igual)
         if 'foto_perfil' in request.files:
             file = request.files['foto_perfil']
-            if file and file.filename != '':
-                if arquivo_permitido(file.filename):
-                    filename = secure_filename(f"user_{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
-                    
-                    # Garante que a pasta absolute/relative de uploads existe
-                    caminho_pasta = os.path.join(app.root_path, UPLOAD_FOLDER)
-                    os.makedirs(caminho_pasta, exist_ok=True)
-                    
-                    file.save(os.path.join(caminho_pasta, filename))
-                    current_user.foto_perfil = filename
-                else:
-                    flash('Formato de imagem inválido. Use PNG, JPG, JPEG ou GIF.', 'danger')
-                    return redirect(url_for('perfil'))
+            if file and file.filename != '' and arquivo_permitido(file.filename):
+                filename = secure_filename(f"user_{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
+                caminho_pasta = os.path.join(app.root_path, UPLOAD_FOLDER)
+                os.makedirs(caminho_pasta, exist_ok=True)
+                file.save(os.path.join(caminho_pasta, filename))
+                current_user.foto_perfil = filename
 
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')

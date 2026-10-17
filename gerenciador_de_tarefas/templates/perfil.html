@@ -22,8 +22,8 @@
             <form method="POST" enctype="multipart/form-data">
                 <div class="mb-3">
                     <label class="form-label" for="nomeUsuario">Nome de Usuário</label>
-                    <input type="text" id="nomeUsuario" class="form-control" value="{{ current_user.nomeUsuario }}" disabled>
-                    <div class="form-text">O nome de usuário não pode ser alterado.</div>
+                    <!-- Agora o nome de usuário é editável -->
+                    <input type="text" id="nomeUsuario" name="nomeUsuario" class="form-control" value="{{ current_user.nomeUsuario }}" required>
                 </div>
 
                 <div class="mb-3">
@@ -33,7 +33,9 @@
 
                 <div class="mb-3">
                     <label class="form-label" for="email">E-mail</label>
-                    <input type="email" id="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+                    <!-- O e-mail fica bloqueado (disabled) -->
+                    <input type="email" id="email" class="form-control" value="{{ current_user.email }}" disabled>
+                    <div class="form-text">O e-mail não pode ser alterado.</div>
                 </div>
 
                 <div class="mb-4">
@@ -41,7 +43,7 @@
                     <input type="file" id="foto_perfil" name="foto_perfil" class="form-control" accept="image/*">
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 mb-3">
                     <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary w-50" style="border-radius:10px; padding:.7rem 1rem;">Voltar</a>
                     <button type="submit" class="btn btn-principal w-50">Salvar Alterações</button>
                 </div>
