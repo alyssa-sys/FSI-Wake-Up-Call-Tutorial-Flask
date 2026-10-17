@@ -58,11 +58,15 @@ def validar_prazo(valor):
     if not valor:
         return None
     try:
-        prazo = datetime.strptime(valor, '%Y-%m-%dT%H:%M')
+        # Lê no formato brasileiro que o Flatpickr envia (dd/mm/aaaa HH:MM)
+        prazo = datetime.strptime(valor, '%d/%m/%Y %H:%M')
     except ValueError:
-        raise ValueError('Data e hora do prazo inválidas')
-    if prazo <= datetime.now():
-        raise ValueError('O prazo deve ser uma data e hora futura')
+        try:
+            # Fallback para o formato ISO caso venha de outra tela
+            prazo = datetime.strptime(valor, '%Y-%m-%d %H:%M')
+        except ValueError:
+            raise ValueError('Data e hora do prazo inválidas')
+
     return prazo
 
 

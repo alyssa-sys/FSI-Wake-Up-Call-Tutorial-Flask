@@ -35,6 +35,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='static.css') }}"
     />
+
+    <!-- Flatpickr CSS e Tema Escuro -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
   </head>
   <body>
 
@@ -318,9 +322,11 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small text-secondary" for="modalPrazoTarefa">Prazo</label>
-                            <input type="datetime-local" id="modalPrazoTarefa" name="prazo" class="form-control bg-dark text-light border-secondary">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small text-secondary" for="modalPrazoTarefa">Prazo</label>
+                                <input type="text" id="modalPrazoTarefa" name="prazo" class="form-control bg-dark text-light border-secondary" placeholder="dd/mm/aaaa hh:mm" autocomplete="off">
+                            </div>
                         </div>
                     </div>
 
@@ -332,5 +338,42 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          const inputPrazo = document.getElementById("modalPrazoTarefa");
+          const formTarefa = inputPrazo ? inputPrazo.closest("form") : null;
+          let valorInicialPadrao = "";
+          
+          if (inputPrazo) {
+              const fp = flatpickr(inputPrazo, {
+                  enableTime: true,
+                  dateFormat: "d/m/Y H:i",
+                  time_24hr: true,
+                  locale: "pt",
+                  allowInput: true
+              });
+
+              const modalElement = document.getElementById("modalAdicionarTarefa");
+              if (modalElement) {
+                  modalElement.addEventListener("show.bs.modal", function () {
+                      fp.setDate(new Date(), true);
+                      valorInicialPadrao = inputPrazo.value; // Salva o valor gerado ao abrir
+                  });
+              }
+
+              // Se enviar sem alterar o valor padrão gerado, limpa para salvar sem prazo
+              if (formTarefa) {
+                  formTarefa.addEventListener("submit", function () {
+                      if (inputPrazo.value === valorInicialPadrao) {
+                          inputPrazo.value = ""; 
+                      }
+                  });
+              }
+          }
+      });
+    </script>
   </body>
 </html>
