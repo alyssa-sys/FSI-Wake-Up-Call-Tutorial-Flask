@@ -2,62 +2,103 @@
 {% block title %}Equipes - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0">Equipes</h2>
-    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary" style="border-radius:10px;">Minhas tarefas</a>
+{# Os estilos desta tela estão no static.css (seção "Equipes"). #}
+
+<div class="quadro-topo">
+    <h1 class="titulo-pagina">Equipes</h1>
+    <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary">Minhas tarefas</a>
 </div>
 
-<div class="row g-3 mb-4">
-    <div class="col-12 col-md-6">
+{# ---------- Criar e unir-se ---------- #}
+<section class="eq-secao">
+    <h2 class="eq-secao-titulo">Criar e Unir-se</h2>
+    <div class="eq-duplo">
         <div class="cartao">
-            <h5 class="fw-bold">Criar equipe</h5>
-            <form method="POST" action="{{ url_for('criar_equipe') }}" class="d-flex gap-2">
-                <input type="text" name="nome" class="form-control" placeholder="Nome da equipe" maxlength="100" required>
-                <button type="submit" class="btn btn-principal">Criar</button>
+            <h3 class="eq-card-titulo">Criar Equipe</h3>
+            <p class="eq-card-sub">Forme um grupo para colaborar em tarefas</p>
+            <form method="POST" action="{{ url_for('criar_equipe') }}" class="eq-form">
+                <label for="nomeEquipe">Nome da equipe</label>
+                <div class="eq-form-linha">
+                    <div class="eq-campo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-1.5a3.5 3.5 0 00-2.5-3.3M15.5 4.2a3.5 3.5 0 010 6.6"/></svg>
+                        <input type="text" id="nomeEquipe" name="nome" class="form-control eq-input"
+                               placeholder="Ex: Desenvolvimento Mobile" maxlength="100" required>
+                    </div>
+                    <button type="submit" class="btn btn-principal">Criar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="cartao">
+            <h3 class="eq-card-titulo">Entrar com Código</h3>
+            <p class="eq-card-sub">Use um código convite para se unir</p>
+            <form method="POST" action="{{ url_for('entrar_equipe') }}" class="eq-form">
+                <label for="codigoEquipe">Código de acesso</label>
+                <div class="eq-form-linha">
+                    <div class="eq-campo">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></svg>
+                        <input type="text" id="codigoEquipe" name="codigo" class="form-control eq-input"
+                               placeholder="Ex: A1B2C3" autocomplete="off" required>
+                    </div>
+                    <button type="submit" class="btn btn-principal">Entrar</button>
+                </div>
             </form>
         </div>
     </div>
-    <div class="col-12 col-md-6">
-        <div class="cartao">
-            <h5 class="fw-bold">Entrar com código</h5>
-            <form method="POST" action="{{ url_for('entrar_equipe') }}" class="d-flex gap-2">
-                <input type="text" name="codigo" class="form-control" placeholder="Código de acesso" required>
-                <button type="submit" class="btn btn-principal">Entrar</button>
-            </form>
-        </div>
-    </div>
-</div>
+</section>
 
-<h5 class="fw-semibold mb-3">Equipes que você criou</h5>
-<div class="row g-3 mb-4">
-    {% for e in minhas %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
-            <div class="cartao">
-                <div class="fw-bold">{{ e.nome }}</div>
-                <div class="text-secondary small">{{ e.membros|length }} membro(s)</div>
-            </div>
+{# ---------- Equipes que você criou ---------- #}
+<section class="eq-secao">
+    <h2 class="eq-secao-titulo mb-3">Equipes que você criou</h2>
+    {% if minhas %}
+    <div class="eq-lista">
+        {% for e in minhas %}
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="eq-equipe">
+            <div class="eq-equipe-nome">{{ e.nome }}</div>
+            <div class="eq-equipe-meta">{{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
         </a>
+        {% endfor %}
     </div>
     {% else %}
-    <p class="text-secondary small">Você ainda não criou nenhuma equipe.</p>
-    {% endfor %}
-</div>
+    <p class="eq-vazio">Você ainda não criou nenhuma equipe.</p>
+    {% endif %}
+</section>
 
-<h5 class="fw-semibold mb-3">Equipes em que você participa</h5>
-<div class="row g-3 mb-5">
-    {% for e in participo %}
-    <div class="col-12 col-md-6 col-lg-4">
-        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="text-decoration-none text-reset">
-            <div class="cartao">
-                <div class="fw-bold">{{ e.nome }}</div>
-                <div class="text-secondary small">Criada por {{ e.dono.nomeUsuario }}</div>
+{# ---------- Equipes em que você participa ---------- #}
+<section class="eq-secao mb-5">
+    <h2 class="eq-secao-titulo">Equipes em que você participa</h2>
+    <p class="eq-secao-sub">Acesse tarefas específicas para cada grupo</p>
+    {% if participo %}
+    <div class="eq-lista">
+        {% for e in participo %}
+        {% set pendentes = e.tarefas|selectattr('status', 'equalto', 'Pendente')|list|length %}
+        {% set concluidas = e.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
+        <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="eq-equipe">
+            <div class="eq-equipe-nome">{{ e.nome }}</div>
+            <div class="eq-equipe-meta">Criada por {{ e.dono.nomeUsuario }}</div>
+            <div class="eq-acoes">
+                <div class="eq-acao status-pendente">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m9 12 2.2 2.2L15.5 10"/></svg>
+                    <span class="eq-acao-texto">Ver tarefas pendentes</span>
+                    <span class="eq-tag">Pendente ({{ pendentes }})</span>
+                </div>
+                <div class="eq-acao status-andamento">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20v-1.5a3.5 3.5 0 00-3.5-3.5h-5A3.5 3.5 0 004 18.5V20M10 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-1.5a3.5 3.5 0 00-2.5-3.3M15.5 4.2a3.5 3.5 0 010 6.6"/></svg>
+                    <span class="eq-acao-texto">Ver membros</span>
+                    <span class="eq-tag">Em equipe ({{ e.membros|length }})</span>
+                </div>
+                <div class="eq-acao status-concluida">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+                    <span class="eq-acao-texto">Ver tarefas concluídas</span>
+                    <span class="eq-tag">Concluída ({{ concluidas }})</span>
+                </div>
             </div>
         </a>
+        {% endfor %}
     </div>
     {% else %}
-    <p class="text-secondary small">Você não participa de nenhuma equipe.</p>
-    {% endfor %}
-</div>
+    <p class="eq-vazio">Você não participa de nenhuma equipe.</p>
+    {% endif %}
+</section>
 
 {% endblock %}

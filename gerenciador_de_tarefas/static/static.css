@@ -709,3 +709,59 @@ textarea.form-control { border-radius: 14px; }
 @media (max-width: 480px) {
     .lc-card { padding: 1.75rem 1.25rem; }
 }
+
+
+/* ==========================================================================
+   Equipes (equipes.html). Prefixo eq-.
+   ========================================================================== */
+.eq-secao { margin-bottom: 1.75rem; }
+.eq-secao-titulo { margin: 0 0 .25rem; font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; }
+.eq-secao-sub { margin: 0 0 1rem; color: var(--cor-suave); font-size: .9rem; }
+.eq-vazio { margin: 0; color: var(--cor-suave); font-size: .9rem; }
+
+/* criar equipe / entrar com código */
+.eq-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: .85rem; }
+.eq-card-titulo { margin: 0 0 .2rem; font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em; }
+.eq-card-sub { margin: 0 0 1.1rem; color: var(--cor-suave); font-size: .9rem; }
+.eq-form label { display: block; margin-bottom: .4rem; font-size: .85rem; font-weight: 600; }
+.eq-form-linha { display: flex; gap: 8px; }
+.eq-campo { position: relative; flex: 1; min-width: 0; }
+.eq-campo > svg {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--cor-suave); pointer-events: none;
+}
+.eq-form .eq-input {
+    height: 46px; padding: 0 1rem 0 2.6rem; border-radius: 12px;
+    background: var(--cor-fundo); border: 1px solid var(--cor-borda);
+}
+.eq-form .eq-input:focus { background: var(--cor-fundo); border-color: var(--cor-primaria); box-shadow: none; }
+.eq-form .btn { height: 46px; padding: 0 1.3rem; }
+
+/* lista de equipes */
+.eq-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.eq-equipe {
+    display: block; padding: 1.15rem 1.25rem;
+    background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: 18px;
+    color: var(--cor-texto); text-decoration: none;
+    transition: border-color .15s;
+}
+.eq-equipe:hover, .eq-equipe:focus-visible { color: var(--cor-texto); border-color: var(--cor-suave); }
+.eq-equipe-nome { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; word-break: break-word; }
+.eq-equipe-meta { margin-top: .15rem; color: var(--cor-suave); font-size: .85rem; }
+.eq-acoes { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.eq-acao {
+    display: flex; align-items: center; gap: 10px; padding: .6rem .75rem;
+    background: var(--cor-superficie-2); border-radius: 12px; font-size: .9rem;
+}
+.eq-acao > svg { flex: none; color: var(--cor-link); }
+.eq-acao-texto { flex: 1; min-width: 0; }
+.eq-tag {
+    flex: none; padding: .2rem .6rem; border-radius: 50rem;
+    font-size: .75rem; font-weight: 600; white-space: nowrap;
+    color: color-mix(in srgb, var(--st) 65%, var(--cor-texto));
+    background: color-mix(in srgb, var(--st) 16%, transparent);
+}
+
+@media (max-width: 800px) {
+    .eq-duplo { grid-template-columns: 1fr; }
+}
