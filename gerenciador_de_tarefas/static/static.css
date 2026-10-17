@@ -880,3 +880,59 @@ textarea.form-control { border-radius: 14px; }
     font-size: .6rem; font-weight: 700;
     background: var(--cor-primaria); color: var(--cor-sobre-primaria);
 }
+
+
+/* ==========================================================================
+   Categorias (categorias.html). Prefixo cat-.
+   Reaproveita .eq-topo, .eq-card, .eq-form, .eq-secao, .eq-lista, .eq-inicial,
+   .eq-equipe-* e .eq-contagem da seção Equipes.
+   ========================================================================== */
+.cat-nova { margin-bottom: 36px; }
+/* cartão "Nova categoria": mais escuro, com pasta e raios decorativos */
+.cat-nova {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--cor-primaria) 13%, var(--cor-fundo)) 0%, color-mix(in srgb, var(--cor-primaria) 4%, var(--cor-superficie)) 85%);
+    border-color: color-mix(in srgb, var(--cor-primaria) 24%, var(--cor-borda));
+}
+.cat-deco { right: 1.6rem; top: 1rem; width: 160px; height: 100px; opacity: 1; color: color-mix(in srgb, var(--cor-primaria) 55%, transparent); }
+.cat-deco-pasta { fill: color-mix(in srgb, var(--cor-primaria) 30%, var(--cor-superficie)); }
+.cat-btn-quadro { display: inline-flex; align-items: center; gap: .55rem; }
+
+/* lista: cartões com largura fixa, sem esticar */
+.cat-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 450px)); gap: 16px; }
+
+.cat-vazio {
+    margin: 0 0 16px; padding: 1.4rem 1.5rem; text-align: center;
+    color: var(--cor-suave); font-size: .92rem;
+    border: 1px dashed var(--cor-borda); border-radius: 20px;
+}
+
+/* cartão de categoria: link no corpo + botão de excluir no canto */
+.cat-card {
+    position: relative; display: flex;
+    background: var(--cor-superficie); border: 1px solid var(--cor-borda); border-radius: 20px;
+    transition: border-color .15s;
+}
+.cat-card:hover, .cat-card:focus-within {
+    border-color: color-mix(in srgb, var(--cor-primaria) 55%, var(--cor-borda));
+}
+.cat-card-link {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 16px;
+    padding: 1.25rem 3.5rem 1.25rem 1.25rem;
+    color: var(--cor-texto); text-decoration: none;
+}
+.cat-card-link:hover, .cat-card-link:focus-visible { color: var(--cor-texto); }
+.cat-excluir { position: absolute; top: 12px; right: 12px; margin: 0; }
+.cat-excluir button {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    padding: 0; border: 0; border-radius: 10px;
+    background: transparent; color: var(--cor-suave); cursor: pointer;
+    transition: background-color .15s, color .15s;
+}
+.cat-excluir button:hover, .cat-excluir button:focus-visible {
+    background: var(--cor-superficie-2); color: var(--cor-texto);
+}
+
+/* "Sem categoria": fixa, tracejada e sem excluir */
+.cat-sem { border-style: dashed; }
+.cat-sem:hover { border-color: var(--cor-suave); }
+.cat-sem-icone { color: var(--cor-suave); background: var(--cor-superficie-2); }
