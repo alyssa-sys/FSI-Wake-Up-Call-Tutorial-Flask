@@ -36,6 +36,8 @@
     </div>
 </div>
 
+{% with busca_no_topo = true %}{% include '_filtros.html' %}{% endwith %}
+
 <section class="resumo">
 
     <div class="cartao">
@@ -94,7 +96,7 @@
     </div>
 </section>
 
-{% with busca_no_topo = true %}{% include '_filtros.html' %}{% endwith %}
+
 
 {% set colunas = [('Pendente', 'status-pendente', 'bg-info text-dark'), ('Em andamento', 'status-andamento', 'bg-warning text-dark'), ('Concluída', 'status-concluida', 'bg-success'), ('Cancelada', 'status-cancelada', 'bg-danger')] %}
 <div class="row g-3 mb-5">
