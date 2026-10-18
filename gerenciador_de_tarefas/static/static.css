@@ -845,6 +845,15 @@ textarea.form-control { border-radius: 14px; }
 .eqp-progresso span { min-width: 2.6em; text-align: right; color: var(--cor-suave); font-size: .85rem; font-weight: 600; }
 
 .eqp-membros { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
+.eqp-cab-dir { display: flex; align-items: center; gap: 12px; }
+.eqp-ver-mais {
+    padding: 0; border: 0; background: none; cursor: pointer;
+    color: var(--cor-link); font-size: .85rem; font-weight: 600;
+}
+.eqp-ver-mais:hover, .eqp-ver-mais:focus-visible { text-decoration: underline; }
+.eqp-mais-info { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--cor-borda); font-size: .85rem; }
+.eqp-membros-todos { display: flex; flex-direction: column; }
+.eqp-membros-todos .eqp-membro:first-child { padding-top: 0; }
 .eqp-membro { display: flex; align-items: center; gap: 12px; padding: .6rem 0; }
 .eqp-membro:first-child { padding-top: 0; }
 .eqp-membro + .eqp-membro { border-top: 1px solid var(--cor-borda); }
