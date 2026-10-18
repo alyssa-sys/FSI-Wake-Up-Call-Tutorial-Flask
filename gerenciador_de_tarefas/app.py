@@ -1,5 +1,5 @@
 import secrets
-from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Contato, ConviteEquipe, CategoriaCompartilhada
+from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Contato, ConviteEquipe, CategoriaCompartilhada, Subtarefa
 from sqlalchemy import or_, and_
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
@@ -142,7 +142,7 @@ def eh_dono(equipe):
 def gerar_codigo():
     return secrets.token_hex(3).upper()
 
-CHAVES_FILTRO = ['q', 'status', 'prioridade', 'prazo', 'responsavel', 'categoria']
+CHAVES_FILTRO = ['q', 'status', 'prioridade', 'prazo', 'responsavel', 'categoria', 'equipe']
 
 def filtro_ativo():
     return any(request.args.get(k) for k in CHAVES_FILTRO)
@@ -371,12 +371,28 @@ def adicionar_tarefa():
         )
 
         db.session.add(nova_tarefa)
+        db.session.flush()
+
+        # Adiciona as subtarefas enviadas no checklist opcional
+        for subtitulo in request.form.getlist('subtarefas[]'):
+            if subtitulo.strip():
+                sub = Subtarefa(tarefa_id=nova_tarefa.id, titulo=subtitulo.strip())
+                db.session.add(sub)
+
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
         return redirect(request.referrer or url_for('quadro'))
 
     return redirect(request.referrer or url_for('quadro'))
+
+@app.route('/subtarefas/<int:subtarefa_id>/toggle', methods=['POST'])
+@login_required
+def toggle_subtarefa(subtarefa_id):
+    sub = db.get_or_404(Subtarefa, subtarefa_id)
+    sub.concluida = not sub.concluida
+    db.session.commit()
+    return {'success': True, 'concluida': sub.concluida}
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['POST'])
@@ -457,17 +473,59 @@ def excluir_tarefa(tarefa_id):
 @app.route('/quadro')
 @login_required
 def quadro():
-    minhas = Tarefa.query.filter(
-        Tarefa.responsavel_id == current_user.id,
-        Tarefa.equipe_id.is_(None),
-        Tarefa.aceite == 'aceita'
-    ).all()
-    tarefas = filtrar_tarefas(minhas)
+    # Verifica se o usuário escolheu uma nova ordenação na requisição
+    nova_ordenacao = request.args.get('ordenacao')
+    if nova_ordenacao:
+        current_user.ordenacao_quadro = nova_ordenacao
+        db.session.commit()
+
+    equipes_usuario = [m.equipe for m in MembroEquipe.query.filter_by(usuario_id=current_user.id).all()]
+    filtro_equipe = request.args.get('equipe', 'todas')
+
+    if filtro_equipe == 'minhas':
+        base_tarefas = Tarefa.query.filter(
+            Tarefa.responsavel_id == current_user.id,
+            Tarefa.equipe_id.is_(None),
+            Tarefa.aceite == 'aceita'
+        ).all()
+    elif filtro_equipe != 'todas' and filtro_equipe.isdigit():
+        eq_id = int(filtro_equipe)
+        base_tarefas = Tarefa.query.filter_by(equipe_id=eq_id).all()
+    else:
+        ids_equipes = [e.id for e in equipes_usuario]
+        tarefas_indiv = Tarefa.query.filter(
+            Tarefa.responsavel_id == current_user.id,
+            Tarefa.equipe_id.is_(None),
+            Tarefa.aceite == 'aceita'
+        ).all()
+        tarefas_eqp = Tarefa.query.filter(Tarefa.equipe_id.in_(ids_equipes)).all() if ids_equipes else []
+        base_tarefas = list({t.id: t for t in (tarefas_indiv + tarefas_eqp)}.values())
+
+    tarefas = filtrar_tarefas(base_tarefas)
+
+    # Lógica de Ordenação persistida
+    ordem = current_user.ordenacao_quadro
+    if ordem == 'prioridade_desc':
+        peso_prio = {'Alta': 1, 'Média': 2, 'Baixa': 3, 'A definir': 4}
+        tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
+    elif ordem == 'prioridade_asc':
+        peso_prio = {'Baixa': 1, 'Média': 2, 'Alta': 3, 'A definir': 4}
+        tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
+    elif ordem == 'prazo':
+        tarefas.sort(key=lambda t: (t.prazo is None, t.prazo))
+    elif ordem == 'titulo':
+        tarefas.sort(key=lambda t: t.titulo.lower())
+    elif ordem == 'status':
+        peso_status = {'Pendente': 1, 'Em andamento': 2, 'Concluída': 3, 'Cancelada': 4}
+        tarefas.sort(key=lambda t: peso_status.get(t.status, 5))
     return render_template('quadro.html',
                            tarefas=tarefas,
                            grafico=contar_status(tarefas),
                            categorias=categorias_do_usuario(),
-                           filtrando=filtro_ativo())
+                           equipes_usuario=equipes_usuario,
+                           equipe_atual=filtro_equipe,
+                           filtrando=filtro_ativo(),
+                           ordenacao_atual=ordem)
 
 #rota das equipes
 @app.route('/equipes')

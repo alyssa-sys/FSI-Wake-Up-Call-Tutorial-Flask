@@ -25,7 +25,12 @@
     </div>
     <div class="eqp-acoes">
         <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary">{{ ico('voltar', 16) }} Categorias</a>
-        <a href="{{ url_for('adicionar_tarefa', categoria=categoria.id) }}" class="btn btn-principal">{{ ico('plus', 16) }} Nova tarefa aqui</a>
+        <button type="button" class="btn btn-principal" 
+                data-bs-toggle="modal" 
+                data-bs-target="#modalAdicionarTarefa"
+                data-categoria-id="{{ categoria.id }}">
+            {{ ico('plus', 16) }} Nova tarefa aqui
+        </button>
     </div>
 </div>
 
@@ -94,6 +99,22 @@
     <p class="eqp-ajuda">Todas as suas tarefas individuais já estão nesta categoria.</p>
     {% endif %}
 </section>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+      const modalAdd = document.getElementById("modalAdicionarTarefa");
+      if (modalAdd) {
+          modalAdd.addEventListener("show.bs.modal", function (event) {
+              const button = event.relatedTarget;
+              if (button && button.dataset.categoriaId) {
+                  const selectCat = document.getElementById("modalCategoriaTarefa");
+                  if (selectCat) {
+                      selectCat.value = button.dataset.categoriaId;
+                  }
+              }
+          });
+      }
+  });
+</script>
 
 {# ---------- Compartilhar com contatos ---------- #}
 <section class="cartao mb-5">

@@ -36,6 +36,8 @@
     </div>
 </div>
 
+{% with busca_no_topo = true %}{% include '_filtros.html' %}{% endwith %}
+
 <section class="resumo">
 
     <div class="cartao">
@@ -94,7 +96,7 @@
     </div>
 </section>
 
-{% with busca_no_topo = true %}{% include '_filtros.html' %}{% endwith %}
+
 
 {% set colunas = [('Pendente', 'status-pendente', 'bg-info text-dark'), ('Em andamento', 'status-andamento', 'bg-warning text-dark'), ('Concluída', 'status-concluida', 'bg-success'), ('Cancelada', 'status-cancelada', 'bg-danger')] %}
 <div class="row g-3 mb-5">
@@ -102,44 +104,53 @@
     {% set lista = tarefas|selectattr('status', 'equalto', nome_status)|list %}
     <div class="col-12 col-md-6 col-xl-3">
         <div class="coluna {{ classe_status }}">
+            <!-- Cabeçalho fixo no topo da coluna -->
             <div class="coluna-topo">
                 <span class="ponto"></span>
                 <h2>{{ nome_status }}</h2>
                 <span class="contador">{{ lista|length }}</span>
             </div>
 
-            {% for tarefa in lista %}
-            {% set atrasada = tarefa_atrasada(tarefa) %}
-            <div class="cartao-tarefa">
-                <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
-                     data-titulo="{{ tarefa.titulo }}"
-                     data-descricao="{{ tarefa.descricao or '' }}"
-                     data-status="{{ tarefa.status }}"
-                     data-cor="{{ cor_badge }}"
-                     data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
-                     data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
-                     data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
-                     data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
-                    <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
-                    {% if tarefa.descricao %}
-                        <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
-                    {% endif %}
-                    {% set prio = tarefa.prioridade or 'A definir' %}
-                    <div class="chips">
-                        <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
-                        {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
-                        <span class="chip">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{{ tarefa.categoria.nome }}
-                        </span>
-                        {% endif %}
-                        {% if tarefa.prazo %}
-                        <span class="chip {{ 'chip-atrasada' if atrasada }}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
+            <!-- Container rolável apenas para os cartões -->
+            <div class="coluna-conteudo">
+                {% for tarefa in lista %}
+              {% set atrasada = tarefa_atrasada(tarefa) %}
+              <div class="cartao-tarefa">
+                  {% set subs_json = [] %}
+                  {% for sub in tarefa.subtarefas %}
+                      {% set _ = subs_json.append({'id': sub.id, 'titulo': sub.titulo, 'concluida': sub.concluida}) %}
+                  {% endfor %}
+
+                  <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
+                      data-titulo="{{ tarefa.titulo }}"
+                      data-descricao="{{ tarefa.descricao or '' }}"
+                      data-status="{{ tarefa.status }}"
+                      data-cor="{{ cor_badge }}"
+                      data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                      data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
+                      data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
+                      data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                      data-subtarefas='{{ subs_json | tojson | safe }}'> <!-- 📋 ADICIONE ESTE ATRIBUTO -->
+                      <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
+                      {% if tarefa.descricao %}
+                          <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
+                      {% endif %}
+                      {% set prio = tarefa.prioridade or 'A definir' %}
+                      <div class="chips">
+                          <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+                          {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
+                          <span class="chip">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{{ tarefa.categoria.nome }}
+                          </span>
+                          {% endif %}
+                          {% if tarefa.prazo %}
+                          <span class="chip {{ 'chip-atrasada' if atrasada }}">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                              {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}
+                          </span>
+                          {% endif %}
+                      </div>
+                  </div>
 
                 <!-- Botão individual de Exportação com Pop-up (Dropdown) para cada tarefa -->
                 <div class="dropdown mt-2">
@@ -189,6 +200,7 @@
             {% else %}
                 <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
             {% endfor %}
+            </div>
         </div>
     </div>
     {% endfor %}
@@ -224,6 +236,12 @@
                 <div>
                     <div class="text-secondary small text-uppercase mb-1">Descrição</div>
                     <p id="modalDescricao" class="mb-0" style="white-space:pre-wrap;"></p>
+                </div>
+                <div id="modalChecklistWrapper" class="mt-3" style="display: none;">
+                    <div class="text-secondary small text-uppercase mb-2">Checklist</div>
+                    <div id="modalChecklistContainer" class="d-flex flex-column gap-2 p-3 border rounded border-secondary" style="background-color: var(--cor-fundo, #1a1a1a);">
+                        <!-- Renderizado via JavaScript -->
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -292,6 +310,46 @@
         btnEditar.dataset.prioridade = d.prioridade || 'A definir';
         btnEditar.dataset.categoria = d.categoriaId || '';
         btnEditar.dataset.prazo = d.prazo || '';
+        
+        const wrapper = document.getElementById('modalChecklistWrapper');
+        const container = document.getElementById('modalChecklistContainer');
+        container.innerHTML = '';
+
+        if (event.relatedTarget) {
+            document.querySelectorAll('.area-clique').forEach(el => el.classList.remove('active-modal-trigger'));
+            event.relatedTarget.classList.add('active-modal-trigger');
+        }
+
+        try {
+            let subtarefas = JSON.parse(d.subtarefas || '[]');
+            if (subtarefas.length > 0) {
+                wrapper.style.display = 'block';
+
+                // Ordena: pendentes no topo, concluídas no final
+                subtarefas.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
+
+                subtarefas.forEach(sub => {
+                    const label = document.createElement('label');
+                    // 'd-inline-flex' e 'w-auto' limitam a caixa de clique ao tamanho da palavra + checkbox
+                    label.className = 'd-inline-flex align-items-center gap-2 w-auto me-auto px-2 py-1 rounded hover-bg';
+                    label.style.cssText = 'font-size: 0.9rem; cursor: pointer; word-break: break-word; user-select: none;';
+                    label.innerHTML = `
+                        <input type="checkbox" class="form-check-input m-0 subtarefa-check" 
+                               data-id="${sub.id}" 
+                               ${sub.concluida ? 'checked' : ''}
+                               onchange="mudarSubtarefaDinamica(this)">
+                        <span class="sub-texto ${sub.concluida ? 'text-decoration-line-through text-secondary opacity-75' : ''}">
+                            ${sub.titulo}
+                        </span>
+                    `;
+                    container.appendChild(label);
+                });
+            } else {
+                wrapper.style.display = 'none';
+            }
+        } catch(e) {
+            wrapper.style.display = 'none';
+        }
     });
 </script>
 
@@ -319,5 +377,48 @@
     });
 </script>
 {% endif %}
+
+<script>
+  function mudarSubtarefaDinamica(checkbox) {
+      const subId = checkbox.dataset.id;
+      const label = checkbox.closest('label');
+      const textoSpan = label.querySelector('.sub-texto');
+      const container = label.parentNode;
+
+      // 1. Aplica o risco visual e move para o final da lista
+      if (checkbox.checked) {
+          textoSpan.classList.add('text-decoration-line-through', 'text-secondary', 'opacity-75');
+          container.appendChild(label); // Envia para o final
+      } else {
+          textoSpan.classList.remove('text-decoration-line-through', 'text-secondary', 'opacity-75');
+          container.insertBefore(label, container.firstChild); // Traz de volta para o topo
+      }
+
+      // 2. Atualiza o dataset 'data-subtarefas' do elemento acionador para persistir ao reabrir o modal sem dar F5
+      const modalElement = document.getElementById('modalTarefa');
+      const areaCliqueAtiva = document.querySelector('.area-clique[data-bs-target="#modalTarefa"].active-modal-trigger') || 
+                              document.querySelector(`[data-subtarefas*='"id":${subId}']`);
+      
+      if (areaCliqueAtiva) {
+          try {
+              let subs = JSON.parse(areaCliqueAtiva.dataset.subtarefas || '[]');
+              const index = subs.findIndex(s => s.id == subId);
+              if (index !== -1) {
+                  subs[index].concluida = checkbox.checked;
+                  
+                  // Reordena o array para manter os pendentes no topo e concluídos embaixo
+                  subs.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
+                  areaCliqueAtiva.dataset.subtarefas = JSON.stringify(subs);
+              }
+          } catch(e) { console.error("Erro ao atualizar dataset:", e); }
+      }
+
+      // 3. Salva no banco de dados via AJAX/fetch
+      fetch(`/subtarefas/${subId}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+      }).catch(error => console.error('Erro ao atualizar subtarefa no servidor:', error));
+  }
+</script>
 
 {% endblock %}

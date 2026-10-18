@@ -63,6 +63,29 @@
         </label>
         {% endif %}
 
+        {% if equipes_usuario is defined %}
+        <label class="filtro-campo">Equipe
+            <select name="equipe" class="form-select">
+                <option value="todas" {% if request.args.get('equipe', 'todas') == 'todas' %}selected{% endif %}>Todas as equipes</option>
+                <option value="minhas" {% if request.args.get('equipe') == 'minhas' %}selected{% endif %}>Apenas pessoais</option>
+                {% for eq in equipes_usuario %}
+                <option value="{{ eq.id }}" {% if request.args.get('equipe') == eq.id|string %}selected{% endif %}>{{ eq.nome }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
+
+        <label class="filtro-campo">Ordenar por
+            <select name="ordenacao" class="form-select" onchange="this.form.submit()">
+                <option value="padrao" {% if ordenacao_atual == 'padrao' %}selected{% endif %}>Padrão (Criação)</option>
+                <option value="prioridade_desc" {% if ordenacao_atual == 'prioridade_desc' %}selected{% endif %}>Prioridade (Alta → Baixa)</option>
+                <option value="prioridade_asc" {% if ordenacao_atual == 'prioridade_asc' %}selected{% endif %}>Prioridade (Baixa → Alta)</option>
+                <option value="prazo" {% if ordenacao_atual == 'prazo' %}selected{% endif %}>Prazo (Mais próximo)</option>
+                <option value="titulo" {% if ordenacao_atual == 'titulo' %}selected{% endif %}>Título (A - Z)</option>
+                <option value="status" {% if ordenacao_atual == 'status' %}selected{% endif %}>Status</option>
+            </select>
+        </label>
+
         <div class="filtros-botoes">
             {% if filtrando %}
             <a href="{{ request.path }}" class="btn btn-outline-secondary">Limpar</a>
