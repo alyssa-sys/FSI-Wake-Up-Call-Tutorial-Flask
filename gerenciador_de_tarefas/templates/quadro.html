@@ -116,6 +116,11 @@
                 {% for tarefa in lista %}
               {% set atrasada = tarefa_atrasada(tarefa) %}
               <div class="cartao-tarefa">
+                  {% set subs_json = [] %}
+                  {% for sub in tarefa.subtarefas %}
+                      {% set _ = subs_json.append({'id': sub.id, 'titulo': sub.titulo, 'concluida': sub.concluida}) %}
+                  {% endfor %}
+
                   <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
                       data-titulo="{{ tarefa.titulo }}"
                       data-descricao="{{ tarefa.descricao or '' }}"
@@ -124,7 +129,8 @@
                       data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
                       data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
                       data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
-                      data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
+                      data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                      data-subtarefas='{{ subs_json | tojson | safe }}'> <!-- 📋 ADICIONE ESTE ATRIBUTO -->
                       <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
                       {% if tarefa.descricao %}
                           <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
@@ -231,6 +237,12 @@
                     <div class="text-secondary small text-uppercase mb-1">Descrição</div>
                     <p id="modalDescricao" class="mb-0" style="white-space:pre-wrap;"></p>
                 </div>
+                <div id="modalChecklistWrapper" class="mt-3" style="display: none;">
+                    <div class="text-secondary small text-uppercase mb-2">Checklist</div>
+                    <div id="modalChecklistContainer" class="d-flex flex-column gap-2 p-3 border rounded border-secondary" style="background-color: var(--cor-fundo, #1a1a1a);">
+                        <!-- Renderizado via JavaScript -->
+                    </div>
+                </div>
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
@@ -298,6 +310,46 @@
         btnEditar.dataset.prioridade = d.prioridade || 'A definir';
         btnEditar.dataset.categoria = d.categoriaId || '';
         btnEditar.dataset.prazo = d.prazo || '';
+        
+        const wrapper = document.getElementById('modalChecklistWrapper');
+        const container = document.getElementById('modalChecklistContainer');
+        container.innerHTML = '';
+
+        if (event.relatedTarget) {
+            document.querySelectorAll('.area-clique').forEach(el => el.classList.remove('active-modal-trigger'));
+            event.relatedTarget.classList.add('active-modal-trigger');
+        }
+
+        try {
+            let subtarefas = JSON.parse(d.subtarefas || '[]');
+            if (subtarefas.length > 0) {
+                wrapper.style.display = 'block';
+
+                // Ordena: pendentes no topo, concluídas no final
+                subtarefas.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
+
+                subtarefas.forEach(sub => {
+                    const label = document.createElement('label');
+                    // 'd-inline-flex' e 'w-auto' limitam a caixa de clique ao tamanho da palavra + checkbox
+                    label.className = 'd-inline-flex align-items-center gap-2 w-auto me-auto px-2 py-1 rounded hover-bg';
+                    label.style.cssText = 'font-size: 0.9rem; cursor: pointer; word-break: break-word; user-select: none;';
+                    label.innerHTML = `
+                        <input type="checkbox" class="form-check-input m-0 subtarefa-check" 
+                               data-id="${sub.id}" 
+                               ${sub.concluida ? 'checked' : ''}
+                               onchange="mudarSubtarefaDinamica(this)">
+                        <span class="sub-texto ${sub.concluida ? 'text-decoration-line-through text-secondary opacity-75' : ''}">
+                            ${sub.titulo}
+                        </span>
+                    `;
+                    container.appendChild(label);
+                });
+            } else {
+                wrapper.style.display = 'none';
+            }
+        } catch(e) {
+            wrapper.style.display = 'none';
+        }
     });
 </script>
 
@@ -325,5 +377,48 @@
     });
 </script>
 {% endif %}
+
+<script>
+  function mudarSubtarefaDinamica(checkbox) {
+      const subId = checkbox.dataset.id;
+      const label = checkbox.closest('label');
+      const textoSpan = label.querySelector('.sub-texto');
+      const container = label.parentNode;
+
+      // 1. Aplica o risco visual e move para o final da lista
+      if (checkbox.checked) {
+          textoSpan.classList.add('text-decoration-line-through', 'text-secondary', 'opacity-75');
+          container.appendChild(label); // Envia para o final
+      } else {
+          textoSpan.classList.remove('text-decoration-line-through', 'text-secondary', 'opacity-75');
+          container.insertBefore(label, container.firstChild); // Traz de volta para o topo
+      }
+
+      // 2. Atualiza o dataset 'data-subtarefas' do elemento acionador para persistir ao reabrir o modal sem dar F5
+      const modalElement = document.getElementById('modalTarefa');
+      const areaCliqueAtiva = document.querySelector('.area-clique[data-bs-target="#modalTarefa"].active-modal-trigger') || 
+                              document.querySelector(`[data-subtarefas*='"id":${subId}']`);
+      
+      if (areaCliqueAtiva) {
+          try {
+              let subs = JSON.parse(areaCliqueAtiva.dataset.subtarefas || '[]');
+              const index = subs.findIndex(s => s.id == subId);
+              if (index !== -1) {
+                  subs[index].concluida = checkbox.checked;
+                  
+                  // Reordena o array para manter os pendentes no topo e concluídos embaixo
+                  subs.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
+                  areaCliqueAtiva.dataset.subtarefas = JSON.stringify(subs);
+              }
+          } catch(e) { console.error("Erro ao atualizar dataset:", e); }
+      }
+
+      // 3. Salva no banco de dados via AJAX/fetch
+      fetch(`/subtarefas/${subId}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+      }).catch(error => console.error('Erro ao atualizar subtarefa no servidor:', error));
+  }
+</script>
 
 {% endblock %}

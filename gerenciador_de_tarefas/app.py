@@ -1,5 +1,5 @@
 import secrets
-from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria
+from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Subtarefa
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -288,12 +288,28 @@ def adicionar_tarefa():
         )
 
         db.session.add(nova_tarefa)
+        db.session.flush()
+
+        # Adiciona as subtarefas enviadas no checklist opcional
+        for subtitulo in request.form.getlist('subtarefas[]'):
+            if subtitulo.strip():
+                sub = Subtarefa(tarefa_id=nova_tarefa.id, titulo=subtitulo.strip())
+                db.session.add(sub)
+
         db.session.commit()
 
         flash('Tarefa adicionada com sucesso!', 'success')
         return redirect(request.referrer or url_for('quadro'))
 
     return redirect(request.referrer or url_for('quadro'))
+
+@app.route('/subtarefas/<int:subtarefa_id>/toggle', methods=['POST'])
+@login_required
+def toggle_subtarefa(subtarefa_id):
+    sub = db.get_or_404(Subtarefa, subtarefa_id)
+    sub.concluida = not sub.concluida
+    db.session.commit()
+    return {'success': True, 'concluida': sub.concluida}
 
 #editar tarefa
 @app.route('/editar_tarefa/<int:tarefa_id>', methods=['POST'])

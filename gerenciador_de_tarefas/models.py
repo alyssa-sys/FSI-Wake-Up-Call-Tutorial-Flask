@@ -29,6 +29,7 @@ class Tarefa(db.Model):
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=True)
+    subtarefas = db.relationship('Subtarefa', backref='tarefa', cascade='all, delete-orphan', lazy=True)
 
 class Equipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -51,3 +52,9 @@ class Categoria(db.Model):
     nome = db.Column(db.String(50), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tarefas = db.relationship('Tarefa', backref='categoria', lazy=True)
+
+class Subtarefa(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tarefa_id = db.Column(db.Integer, db.ForeignKey('tarefa.id', ondelete='CASCADE'), nullable=False)
+    titulo = db.Column(db.String(255), nullable=False)
+    concluida = db.Column(db.Boolean, default=False)
