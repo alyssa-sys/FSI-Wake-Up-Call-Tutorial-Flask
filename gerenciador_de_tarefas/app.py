@@ -820,11 +820,13 @@ def ver_categoria(categoria_id):
     dentro = [t for t in todas if t.categoria_id == categoria.id]
     disponiveis = [t for t in todas if t.categoria_id != categoria.id]
     ja = {cs.usuario_id for cs in categoria.compartilhamentos}
-    convidaveis = [u for u in contatos_aceitos() if u.id not in ja]
+    meus_contatos = contatos_aceitos()
+    convidaveis = [u for u in meus_contatos if u.id not in ja]
     return render_template('categoria.html', categoria=categoria,
                            tarefas=dentro, disponiveis=disponiveis,
                            compartilhamentos=categoria.compartilhamentos,
-                           convidaveis=convidaveis)
+                           convidaveis=convidaveis,
+                           total_contatos=len(meus_contatos))
 
 #adicionar a uma categoria
 @app.route('/categorias/<int:categoria_id>/adicionar', methods=['POST'])

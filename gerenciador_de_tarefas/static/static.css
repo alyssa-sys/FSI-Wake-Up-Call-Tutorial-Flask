@@ -978,6 +978,19 @@ textarea.form-control { border-radius: 14px; }
 .cat-linha-em { color: var(--cor-suave); font-size: .8rem; }
 .cat-adicionar { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.25rem; }
 
+/* Compartilhar com contatos (categoria.html): blocos com o mesmo espaço entre si */
+.cat-comp { display: flex; flex-direction: column; gap: 1.25rem; }
+.cat-comp .eq-secao-cab { margin-bottom: 0; }
+.cat-comp .eqp-card-titulo { margin: 0; }
+.cat-comp-intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.25rem; }
+.cat-comp-intro .eqp-ajuda { flex: 1 1 260px; }
+.cat-comp-bloco { padding-top: 1.25rem; border-top: 1px solid var(--cor-borda); }
+.cat-comp-sub { margin: 0 0 .85rem; font-size: .85rem; font-weight: 600; color: var(--cor-suave); letter-spacing: 0; }
+.cat-comp-lista .eqp-membro:first-child { padding-top: 0; }
+.cat-comp-lista .eqp-membro:last-child { padding-bottom: 0; }
+.cat-comp-form { display: flex; flex-wrap: wrap; gap: 10px; }
+.cat-comp-form .form-select { flex: 1 1 240px; min-width: 0; }
+
 /* ==========================================================================
    Formulário de tarefa (adicionar_tarefa.html e editar_tarefa.html).
    Prefixo form-. Reaproveita .eq-card-icone da seção Equipes.
