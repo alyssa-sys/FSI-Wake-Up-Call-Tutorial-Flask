@@ -117,7 +117,8 @@
                 <div class="eq-equipe-meta">{{ ico('users', 14) }} Criada por {{ e.dono.nomeUsuario }} · {{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
                 <div class="eq-equipe-rodape">
                     <div class="eq-tags">
-                        <span class="eq-tag">Membro</span>
+                        {% set meu_vinculo = e.membros|selectattr('usuario_id', 'equalto', current_user.id)|list|first %}
+                        <span class="eq-tag">{{ 'Admin' if meu_vinculo and meu_vinculo.cargo == 'admin' else 'Membro' }}</span>
                         <span class="eq-tag status-pendente">Pendente ({{ pendentes }})</span>
                         <span class="eq-tag status-concluida">Concluída ({{ concluidas }})</span>
                     </div>

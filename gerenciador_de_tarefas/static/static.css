@@ -859,7 +859,68 @@ textarea.form-control { border-radius: 14px; }
 .eqp-membro + .eqp-membro { border-top: 1px solid var(--cor-borda); }
 .eqp-membro form { margin: 0; }
 .eqp-membro .usuario-foto { width: 44px; height: 44px; font-size: 1.1rem; }
-.eqp-membro-nome { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eqp-membro-identidade { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.eqp-membro-nome { flex: 0 1 auto; min-width: 0; max-width: 100%; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eqp-membro-identidade .eq-tag { flex: none; }
+.eqp-membro-acoes { display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
+/* Controles compactos para gerenciar membros da equipe. */
+.eqp-membros { max-height: none; overflow: visible; }
+.eqp-membro-acoes { align-items: center; }
+.eqp-membro-acoes .eqp-remover-form { flex: none; }
+.eqp-membro-acoes .eqp-btn-remover,
+.eqp-membro-dropdown .eqp-membro-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .35rem;
+    padding: .3rem .65rem;
+    font-size: .8rem;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+.eqp-membro-dropdown .eqp-membro-menu-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 50%;
+}
+.eqp-menu-tres-pontos {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex: none;
+}
+.eqp-membro-dropdown .dropdown-menu {
+    min-width: 11rem;
+    padding: .35rem;
+    z-index: 1100;
+    max-height: min(18rem, calc(100vh - 16px));
+    overflow-y: auto;
+}
+.eqp-membro-dropdown .dropdown-item {
+    padding: .45rem .6rem;
+    border-radius: 8px;
+    color: var(--cor-texto);
+    font-size: .84rem;
+}
+.eqp-membro-dropdown .dropdown-item:hover,
+.eqp-membro-dropdown .dropdown-item:focus {
+    color: var(--cor-texto);
+    background: var(--cor-superficie-2);
+}
+.eqp-membro-dropdown .dropdown-item:disabled {
+    color: var(--cor-suave);
+    opacity: .55;
+    cursor: not-allowed;
+}
+.eqp-membro-dropdown .eqp-opcao-perigo { color: var(--status-cancelada); }
+.eqp-membro-dropdown .eqp-opcao-perigo:hover,
+.eqp-membro-dropdown .eqp-opcao-perigo:focus {
+    color: var(--status-cancelada);
+    background: color-mix(in srgb, var(--status-cancelada) 12%, var(--cor-superficie));
+}
+
 
 .eqp-codigo { margin-bottom: .7rem; padding: .7rem 1.1rem; border: 1px solid var(--cor-borda); border-radius: 14px; background: var(--cor-fundo); }
 .eqp-codigo .codigo-acesso { padding: 0; border-radius: 0; background: none; font-size: 1.5rem; font-weight: 600; letter-spacing: .08em; }

@@ -44,6 +44,7 @@ class MembroEquipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    cargo = db.Column(db.String(20), nullable=False, default='membro', server_default='membro')
     usuario = db.relationship('Usuario')
     __table_args__ = (db.UniqueConstraint('equipe_id', 'usuario_id'),)
 

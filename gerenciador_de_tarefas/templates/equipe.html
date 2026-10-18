@@ -22,20 +22,86 @@
 {%- endmacro %}
 
 {# Linha de um membro: usada no card "Membros" e no popup "Ver mais" #}
-{% macro linha_membro(m, dono, equipe) -%}
+{% macro linha_membro(m, dono, admin_equipe, equipe, mostrar_acoes=false) -%}
 <div class="eqp-membro">
     {% if m.usuario.foto_perfil and m.usuario.foto_perfil != 'default.png' %}
         <img src="{{ url_for('static', filename='uploads/' + m.usuario.foto_perfil) }}" alt="" class="usuario-foto" />
     {% else %}
         <span class="usuario-foto">{{ m.usuario.nomeUsuario[:1]|upper }}</span>
     {% endif %}
-    <span class="eqp-membro-nome">{{ m.usuario.nomeUsuario }}</span>
-    {% if m.usuario_id == equipe.dono_id %}<span class="eq-tag">criador</span>{% endif %}
+    <div class="eqp-membro-identidade">
+        <span class="eqp-membro-nome">{{ m.usuario.nomeUsuario }}</span>
+        {% if m.usuario_id == equipe.dono_id %}
+            <span class="eq-tag">criador</span>
+        {% elif m.cargo == 'admin' %}
+            <span class="eq-tag">admin</span>
+        {% endif %}
+    </div>
     {% if dono and m.usuario_id != equipe.dono_id %}
-    <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
-          onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
-        <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
-    </form>
+        {% if mostrar_acoes %}
+    <div class="eqp-membro-acoes">
+        <div class="dropdown eqp-membro-dropdown">
+            <button type="button" class="btn btn-outline-secondary btn-sm eqp-membro-menu-btn"
+                    data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
+                    aria-haspopup="true" aria-label="Gerenciar membro {{ m.usuario.nomeUsuario }}"
+                    title="Gerenciar membro {{ m.usuario.nomeUsuario }}">
+                <svg class="eqp-menu-tres-pontos" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="5" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="12" cy="19" r="1.7" />
+                </svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <form method="POST" action="{{ url_for('definir_cargo_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+                          onsubmit="return confirm('Promover este membro a administrador da equipe?');">
+                        <input type="hidden" name="cargo" value="admin">
+                        <button type="submit" class="dropdown-item" {% if m.cargo == 'admin' %}disabled aria-disabled="true"{% endif %}>Tornar admin</button>
+                    </form>
+                </li>
+                <li>
+                    <form method="POST" action="{{ url_for('definir_cargo_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+                          onsubmit="return confirm('Remover o cargo de administrador deste membro?');">
+                        <input type="hidden" name="cargo" value="membro">
+                        <button type="submit" class="dropdown-item" {% if m.cargo != 'admin' %}disabled aria-disabled="true"{% endif %}>Remover admin</button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                {% if admin_equipe and m.usuario_id != equipe.dono_id and m.usuario_id != current_user.id %}
+                <li>
+                    <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+                          onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
+                        <button type="submit" class="dropdown-item eqp-opcao-perigo">Remover</button>
+                    </form>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+        {% endif %}
+    {% elif mostrar_acoes and admin_equipe and m.usuario_id != equipe.dono_id and m.usuario_id != current_user.id %}
+    <div class="eqp-membro-acoes">
+        <div class="dropdown eqp-membro-dropdown">
+            <button type="button" class="btn btn-outline-secondary btn-sm eqp-membro-menu-btn"
+                    data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
+                    aria-haspopup="true" aria-label="Gerenciar membro {{ m.usuario.nomeUsuario }}"
+                    title="Gerenciar membro {{ m.usuario.nomeUsuario }}">
+                <svg class="eqp-menu-tres-pontos" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="5" r="1.7" />
+                    <circle cx="12" cy="12" r="1.7" />
+                    <circle cx="12" cy="19" r="1.7" />
+                </svg>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+                          onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
+                        <button type="submit" class="dropdown-item eqp-opcao-perigo">Remover</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
     {% endif %}
 </div>
 {%- endmacro %}
@@ -44,6 +110,12 @@
 {% set total = grafico|sum %}
 {% set pct = ((grafico[2] * 100) / total)|round|int if total else 0 %}
 {% set n_membros = membros|length %}
+
+{# Hierarquia visual: criador primeiro, depois admins e por fim membros comuns. #}
+{% set membros_criador = membros|selectattr('usuario_id', 'equalto', equipe.dono_id)|list %}
+{% set membros_admins = membros|selectattr('cargo', 'equalto', 'admin')|rejectattr('usuario_id', 'equalto', equipe.dono_id)|list %}
+{% set membros_comuns = membros|rejectattr('cargo', 'equalto', 'admin')|rejectattr('usuario_id', 'equalto', equipe.dono_id)|list %}
+{% set membros_ordenados = membros_criador + membros_admins + membros_comuns %}
 
 {# ---------- Cabeçalho ---------- #}
 <div class="eqp-topo">
@@ -55,13 +127,13 @@
                 <span>Criada por {{ equipe.dono.nomeUsuario }}</span>
                 <span aria-hidden="true">•</span>
                 <span>{{ n_membros }} membro{{ '' if n_membros == 1 else 's' }}</span>
-                <span class="eq-tag">{{ 'Criador' if dono else 'Membro' }}</span>
+                <span class="eq-tag">{{ 'Criador' if dono else ('Admin' if admin_equipe else 'Membro') }}</span>
             </div>
         </div>
     </div>
     <div class="eqp-acoes">
         <a href="{{ url_for('equipes') }}" class="btn btn-outline-secondary">{{ ico('back', 16) }} Voltar para Equipes</a>
-        {% if dono %}
+        {% if admin_equipe %}
         {% set membros_json = [] %}
         {% for m in membros %}
             {% set _ = membros_json.append({'id': m.usuario.id, 'nome': m.usuario.nomeUsuario}) %}
@@ -75,6 +147,8 @@
                 data-membros='{{ membros_json | tojson }}'>
             {{ ico('plus', 16) }} Atribuir tarefa
         </button>
+        {% endif %}
+        {% if dono %}
         <form method="POST" action="{{ url_for('excluir_equipe', equipe_id=equipe.id) }}"
               onsubmit="return confirm('Excluir a equipe, todas as tarefas e remover os membros? Isso não pode ser desfeito.');">
             <button type="submit" class="btn btn-outline-danger">{{ ico('trash', 16) }} Excluir equipe</button>
@@ -124,8 +198,8 @@
             </div>
         </div>
         <div class="eqp-membros">
-            {% for m in membros[:3] %}
-            {{ linha_membro(m, dono, equipe) }}
+            {% for m in membros_ordenados[:3] %}
+            {{ linha_membro(m, dono, admin_equipe, equipe) }}
             {% endfor %}
         </div>
         {% if n_membros > 3 %}
@@ -133,7 +207,7 @@
         {% endif %}
     </div>
 
-    {% if dono %}
+    {% if admin_equipe %}
     <div class="cartao">
         <h2 class="eqp-card-titulo">{{ ico('lock', 22) }} Código de acesso</h2>
         <div class="eqp-codigo"><span class="codigo-acesso">{{ equipe.codigo_acesso }}</span></div>
@@ -295,8 +369,8 @@
             </div>
             <div class="modal-body">
                 <div class="eqp-membros-todos">
-                    {% for m in membros %}
-                    {{ linha_membro(m, dono, equipe) }}
+                    {% for m in membros_ordenados %}
+                    {{ linha_membro(m, dono, admin_equipe, equipe, true) }}
                     {% endfor %}
                 </div>
             </div>
@@ -331,6 +405,77 @@
     });
 </script>
 {% endif %}
+
+<script>
+  // Menus de ações no modal são posicionados em relação à janela para não serem
+  // cortados pela área rolável nem ficarem atrás do rodapé.
+  document.addEventListener("DOMContentLoaded", function () {
+      const modalMembros = document.getElementById("modalMembros");
+      if (!modalMembros) return;
+
+      function obterMenu(event) {
+          const alvo = event.target;
+          const botao = alvo && alvo.closest ? alvo.closest(".eqp-membro-menu-btn") : null;
+          if (!botao || !modalMembros.contains(botao)) return null;
+          const dropdown = botao.closest(".eqp-membro-dropdown");
+          const menu = dropdown ? dropdown.querySelector(".dropdown-menu") : null;
+          return menu ? { botao: botao, menu: menu } : null;
+      }
+
+      function posicionarMenu(botao, menu) {
+          const retBotao = botao.getBoundingClientRect();
+          menu.style.position = "fixed";
+          menu.style.maxHeight = "calc(100vh - 16px)";
+          menu.style.overflowY = "auto";
+          menu.style.zIndex = "1100";
+          menu.style.transform = "none";
+          menu.style.margin = "0";
+          menu.style.right = "auto";
+          menu.style.bottom = "auto";
+
+          const alturaMenu = menu.scrollHeight;
+          const larguraMenu = menu.offsetWidth;
+          const espacamento = 6;
+          const cabeAbaixo = window.innerHeight - retBotao.bottom >= alturaMenu + espacamento + 8;
+          const topo = cabeAbaixo
+              ? retBotao.bottom + espacamento
+              : Math.max(8, retBotao.top - alturaMenu - espacamento);
+          const esquerda = Math.max(8, Math.min(
+              window.innerWidth - larguraMenu - 8,
+              retBotao.right - larguraMenu
+          ));
+
+          menu.style.top = topo + "px";
+          menu.style.left = esquerda + "px";
+      }
+
+      function limparPosicao(menu) {
+          ["position", "top", "left", "right", "bottom", "transform", "margin", "z-index", "max-height", "overflow-y"]
+              .forEach(function (propriedade) { menu.style.removeProperty(propriedade); });
+      }
+
+      modalMembros.addEventListener("shown.bs.dropdown", function (event) {
+          const itens = obterMenu(event);
+          if (itens) posicionarMenu(itens.botao, itens.menu);
+      });
+
+      ["hide.bs.dropdown", "hidden.bs.dropdown"].forEach(function (nomeEvento) {
+          modalMembros.addEventListener(nomeEvento, function (event) {
+              const itens = obterMenu(event);
+              if (itens) limparPosicao(itens.menu);
+          });
+      });
+
+      // Se a janela mudar de tamanho com o menu aberto, mantém o menu dentro da tela.
+      window.addEventListener("resize", function () {
+          const botaoAberto = modalMembros.querySelector('.eqp-membro-menu-btn[aria-expanded="true"]');
+          if (!botaoAberto) return;
+          const dropdown = botaoAberto.closest(".eqp-membro-dropdown");
+          const menu = dropdown ? dropdown.querySelector(".dropdown-menu.show") : null;
+          if (menu) posicionarMenu(botaoAberto, menu);
+      });
+  });
+</script>
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {

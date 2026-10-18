@@ -1,6 +1,6 @@
 import secrets
 from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Contato, ConviteEquipe, CategoriaCompartilhada, Subtarefa
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, text
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, Response
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -138,6 +138,26 @@ def eh_membro(equipe):
 
 def eh_dono(equipe):
     return equipe.dono_id == current_user.id
+
+def membro_da_equipe(equipe, usuario_id=None):
+    uid = current_user.id if usuario_id is None else usuario_id
+    return next((m for m in equipe.membros if m.usuario_id == uid), None)
+
+def eh_admin_equipe(equipe):
+    """Criador ou membro promovido a admin da equipe."""
+    if eh_dono(equipe):
+        return True
+    m = membro_da_equipe(equipe)
+    return m is not None and m.cargo == 'admin'
+
+def garantir_schema():
+    db.create_all()
+    colunas = [linha[1] for linha in db.session.execute(text("PRAGMA table_info(membro_equipe)"))]
+    if 'cargo' not in colunas:
+        db.session.execute(text(
+            "ALTER TABLE membro_equipe ADD COLUMN cargo VARCHAR(20) NOT NULL DEFAULT 'membro'"
+        ))
+        db.session.commit()
 
 def gerar_codigo():
     return secrets.token_hex(3).upper()
@@ -546,7 +566,7 @@ def criar_equipe():
     equipe = Equipe(nome=nome[:100], dono_id=current_user.id, codigo_acesso=gerar_codigo())
     db.session.add(equipe)
     db.session.flush()
-    db.session.add(MembroEquipe(equipe_id=equipe.id, usuario_id=current_user.id))
+    db.session.add(MembroEquipe(equipe_id=equipe.id, usuario_id=current_user.id, cargo='admin'))
     db.session.commit()
     flash('Equipe criada!', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
@@ -580,7 +600,8 @@ def ver_equipe(equipe_id):
 
     convidaveis = []
     total_contatos = 0
-    if eh_dono(equipe):
+    admin_equipe = eh_admin_equipe(equipe)
+    if admin_equipe:
         ja = {m.usuario_id for m in equipe.membros} | {c.convidado_id for c in equipe.convites}
         meus_contatos = contatos_aceitos()
         total_contatos = len(meus_contatos)
@@ -588,6 +609,7 @@ def ver_equipe(equipe_id):
 
     return render_template('equipe.html', equipe=equipe, tarefas=tarefas,
                            membros=equipe.membros, dono=eh_dono(equipe),
+                           admin_equipe=admin_equipe,
                            grafico=contar_status(tarefas),
                            pessoas=[m.usuario for m in equipe.membros],
                            filtrando=filtro_ativo(),
@@ -599,8 +621,8 @@ def ver_equipe(equipe_id):
 @login_required
 def adicionar_tarefa_equipe(equipe_id):
     equipe = db.get_or_404(Equipe, equipe_id)
-    if not eh_dono(equipe):
-        flash('Só o criador da equipe pode atribuir tarefas.', 'danger')
+    if not eh_admin_equipe(equipe):
+        flash('Só o criador ou um admin da equipe pode atribuir tarefas.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     membros = [m.usuario for m in equipe.membros]
 
@@ -637,8 +659,8 @@ def adicionar_tarefa_equipe(equipe_id):
 @login_required
 def novo_codigo_equipe(equipe_id):
     equipe = db.get_or_404(Equipe, equipe_id)
-    if not eh_dono(equipe):
-        flash('Só o criador da equipe pode gerar um novo código.', 'danger')
+    if not eh_admin_equipe(equipe):
+        flash('Só o criador ou um admin da equipe pode gerar um novo código.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     equipe.codigo_acesso = gerar_codigo()
     db.session.commit()
@@ -651,11 +673,14 @@ def novo_codigo_equipe(equipe_id):
 def remover_membro(equipe_id, usuario_id):
     equipe = db.get_or_404(Equipe, equipe_id)
     sair = usuario_id == current_user.id
+    if usuario_id == equipe.dono_id:
+        flash('O criador da equipe não pode ser removido.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     if sair and eh_dono(equipe):
         flash('O criador não pode sair da própria equipe. Exclua a equipe se quiser encerrá-la.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
-    if not sair and not eh_dono(equipe):
-        flash('Só o criador pode remover membros.', 'danger')
+    if not sair and not eh_admin_equipe(equipe):
+        flash('Só o criador ou um admin da equipe pode remover membros.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
     membro = MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=usuario_id).first_or_404()
 
@@ -685,6 +710,32 @@ def excluir_equipe(equipe_id):
     db.session.commit()
     flash('Equipe excluída.', 'success')
     return redirect(url_for('equipes'))
+
+#promover ou rebaixar admin da equipe (somente o criador)
+@app.route('/equipes/<int:equipe_id>/membros/<int:usuario_id>/cargo', methods=['POST'])
+@login_required
+def definir_cargo_membro(equipe_id, usuario_id):
+    equipe = db.get_or_404(Equipe, equipe_id)
+    if not eh_dono(equipe):
+        flash('Só o criador da equipe pode promover ou remover admins.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+    if usuario_id == equipe.dono_id:
+        flash('O criador da equipe já tem todos os poderes.', 'info')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+    cargo = request.form.get('cargo', '')
+    if cargo not in ('admin', 'membro'):
+        flash('Cargo inválido.', 'danger')
+        return redirect(url_for('ver_equipe', equipe_id=equipe.id))
+
+    membro = MembroEquipe.query.filter_by(equipe_id=equipe.id, usuario_id=usuario_id).first_or_404()
+    membro.cargo = cargo
+    db.session.commit()
+    if cargo == 'admin':
+        flash(f'{membro.usuario.nomeUsuario} agora é admin da equipe.', 'success')
+    else:
+        flash(f'{membro.usuario.nomeUsuario} não é mais admin da equipe.', 'success')
+    return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
@@ -1068,8 +1119,8 @@ def notificacoes():
 @login_required
 def convidar_contato(equipe_id):
     equipe = db.get_or_404(Equipe, equipe_id)
-    if not eh_dono(equipe):
-        flash('Só o criador da equipe pode convidar.', 'danger')
+    if not eh_admin_equipe(equipe):
+        flash('Só o criador ou um admin da equipe pode convidar.', 'danger')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
     usuario_id = request.form.get('usuario_id', type=int)
@@ -1123,8 +1174,8 @@ def recusar_convite(convite_id):
 def cancelar_convite(convite_id):
     convite = db.get_or_404(ConviteEquipe, convite_id)
     equipe_id = convite.equipe_id
-    if not eh_dono(convite.equipe):
-        flash('Só o criador da equipe pode cancelar convites.', 'danger')
+    if not eh_admin_equipe(convite.equipe):
+        flash('Só o criador ou um admin da equipe pode cancelar convites.', 'danger')
         return redirect(url_for('equipes'))
     db.session.delete(convite)
     db.session.commit()
@@ -1260,5 +1311,5 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        garantir_schema()
     app.run(debug=True)
