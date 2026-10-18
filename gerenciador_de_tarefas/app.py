@@ -579,16 +579,20 @@ def ver_equipe(equipe_id):
     tarefas = filtrar_tarefas(Tarefa.query.filter_by(equipe_id=equipe.id).all())
 
     convidaveis = []
+    total_contatos = 0
     if eh_dono(equipe):
         ja = {m.usuario_id for m in equipe.membros} | {c.convidado_id for c in equipe.convites}
-        convidaveis = [u for u in contatos_aceitos() if u.id not in ja]
+        meus_contatos = contatos_aceitos()
+        total_contatos = len(meus_contatos)
+        convidaveis = [u for u in meus_contatos if u.id not in ja]
 
     return render_template('equipe.html', equipe=equipe, tarefas=tarefas,
                            membros=equipe.membros, dono=eh_dono(equipe),
                            grafico=contar_status(tarefas),
                            pessoas=[m.usuario for m in equipe.membros],
                            filtrando=filtro_ativo(),
-                           convidaveis=convidaveis)
+                           convidaveis=convidaveis,
+                           total_contatos=total_contatos)
 
 #adicionar tarefa equipe
 @app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])

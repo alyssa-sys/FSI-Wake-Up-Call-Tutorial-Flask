@@ -143,7 +143,9 @@
             <button type="submit" class="btn btn-outline-secondary btn-sm eqp-contorno">{{ ico('refresh', 15) }} Gerar novo código</button>
         </form>
     </div>
-        <div class="cartao">
+    {# O card some quando todos os seus contatos já estão na equipe (ou convidados) e não há convite pendente. #}
+    {% if convidaveis or equipe.convites or not total_contatos %}
+    <div class="cartao">
         <h2 class="eqp-card-titulo">{{ ico('plus', 22) }} Convidar contato</h2>
         {% if convidaveis %}
         <form method="POST" action="{{ url_for('convidar_contato', equipe_id=equipe.id) }}" class="d-flex gap-2">
@@ -155,12 +157,12 @@
             </select>
             <button type="submit" class="btn btn-principal">Convidar</button>
         </form>
-        {% else %}
-        <p class="eqp-ajuda">Nenhum contato disponível para convidar. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
+        {% elif not total_contatos %}
+        <p class="eqp-ajuda">Você ainda não tem contatos. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
         {% endif %}
 
         {% if equipe.convites %}
-        <p class="eqp-ajuda mt-3 mb-1">Convites pendentes</p>
+        <p class="eqp-ajuda {{ 'mt-3' if (convidaveis or not total_contatos) }} mb-1">Convites pendentes</p>
         {% for c in equipe.convites %}
         <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
             <span>{{ c.convidado.nomeUsuario }}</span>
@@ -171,6 +173,7 @@
         {% endfor %}
         {% endif %}
     </div>
+    {% endif %}
     {% endif %}
 
 </section>
