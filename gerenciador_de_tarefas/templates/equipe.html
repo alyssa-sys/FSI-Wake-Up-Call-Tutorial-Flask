@@ -21,6 +21,25 @@
 {%- endif %}</svg>
 {%- endmacro %}
 
+{# Linha de um membro: usada no card "Membros" e no popup "Ver mais" #}
+{% macro linha_membro(m, dono, equipe) -%}
+<div class="eqp-membro">
+    {% if m.usuario.foto_perfil and m.usuario.foto_perfil != 'default.png' %}
+        <img src="{{ url_for('static', filename='uploads/' + m.usuario.foto_perfil) }}" alt="" class="usuario-foto" />
+    {% else %}
+        <span class="usuario-foto">{{ m.usuario.nomeUsuario[:1]|upper }}</span>
+    {% endif %}
+    <span class="eqp-membro-nome">{{ m.usuario.nomeUsuario }}</span>
+    {% if m.usuario_id == equipe.dono_id %}<span class="eq-tag">criador</span>{% endif %}
+    {% if dono and m.usuario_id != equipe.dono_id %}
+    <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
+          onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
+        <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
+    </form>
+    {% endif %}
+</div>
+{%- endmacro %}
+
 {# grafico = [pendente, em andamento, concluída, cancelada] #}
 {% set total = grafico|sum %}
 {% set pct = ((grafico[2] * 100) / total)|round|int if total else 0 %}
@@ -99,27 +118,19 @@
     <div class="cartao">
         <div class="eqp-card-cab">
             <h2 class="eqp-card-titulo">{{ ico('users', 22) }} Membros</h2>
-            <span class="eq-contagem">{{ n_membros }}</span>
+            <div class="eqp-cab-dir">
+                <button type="button" class="eqp-ver-mais" data-bs-toggle="modal" data-bs-target="#modalMembros">Ver mais</button>
+                <span class="eq-contagem">{{ n_membros }}</span>
+            </div>
         </div>
         <div class="eqp-membros">
-            {% for m in membros %}
-            <div class="eqp-membro">
-                {% if m.usuario.foto_perfil and m.usuario.foto_perfil != 'default.png' %}
-                    <img src="{{ url_for('static', filename='uploads/' + m.usuario.foto_perfil) }}" alt="" class="usuario-foto" />
-                {% else %}
-                    <span class="usuario-foto">{{ m.usuario.nomeUsuario[:1]|upper }}</span>
-                {% endif %}
-                <span class="eqp-membro-nome">{{ m.usuario.nomeUsuario }}</span>
-                {% if m.usuario_id == equipe.dono_id %}<span class="eq-tag">criador</span>{% endif %}
-                {% if dono and m.usuario_id != equipe.dono_id %}
-                <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=m.usuario_id) }}"
-                      onsubmit="return confirm('Remover este membro? As tarefas não concluídas dele serão canceladas.');">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
-                </form>
-                {% endif %}
-            </div>
+            {% for m in membros[:3] %}
+            {{ linha_membro(m, dono, equipe) }}
             {% endfor %}
         </div>
+        {% if n_membros > 3 %}
+        <p class="eqp-ajuda eqp-mais-info">e mais {{ n_membros - 3 }} membro{{ '' if n_membros - 3 == 1 else 's' }}</p>
+        {% endif %}
     </div>
 
     {% if dono %}
@@ -132,7 +143,9 @@
             <button type="submit" class="btn btn-outline-secondary btn-sm eqp-contorno">{{ ico('refresh', 15) }} Gerar novo código</button>
         </form>
     </div>
-        <div class="cartao">
+    {# O card some quando todos os seus contatos já estão na equipe (ou convidados) e não há convite pendente. #}
+    {% if convidaveis or equipe.convites or not total_contatos %}
+    <div class="cartao">
         <h2 class="eqp-card-titulo">{{ ico('plus', 22) }} Convidar contato</h2>
         {% if convidaveis %}
         <form method="POST" action="{{ url_for('convidar_contato', equipe_id=equipe.id) }}" class="d-flex gap-2">
@@ -144,12 +157,12 @@
             </select>
             <button type="submit" class="btn btn-principal">Convidar</button>
         </form>
-        {% else %}
-        <p class="eqp-ajuda">Nenhum contato disponível para convidar. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
+        {% elif not total_contatos %}
+        <p class="eqp-ajuda">Você ainda não tem contatos. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
         {% endif %}
 
         {% if equipe.convites %}
-        <p class="eqp-ajuda mt-3 mb-1">Convites pendentes</p>
+        <p class="eqp-ajuda {{ 'mt-3' if (convidaveis or not total_contatos) }} mb-1">Convites pendentes</p>
         {% for c in equipe.convites %}
         <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
             <span>{{ c.convidado.nomeUsuario }}</span>
@@ -160,6 +173,7 @@
         {% endfor %}
         {% endif %}
     </div>
+    {% endif %}
     {% endif %}
 
 </section>
@@ -268,6 +282,31 @@
     {% endfor %}
 </div>
 
+{# ---------- Popup: todos os membros ---------- #}
+<div class="modal fade" id="modalMembros" tabindex="-1" aria-labelledby="modalMembrosTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="modalMembrosTitulo">Membros da equipe</h5>
+                    <small class="text-secondary">{{ equipe.nome }} · {{ n_membros }} membro{{ '' if n_membros == 1 else 's' }}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="eqp-membros-todos">
+                    {% for m in membros %}
+                    {{ linha_membro(m, dono, equipe) }}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if total > 0 %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
@@ -334,7 +373,25 @@
               }
           });
       }
+      const modalEl = document.getElementById("modalAtribuirTarefaEquipe");
+      if (modalEl) {
+          modalEl.addEventListener("show.bs.modal", function (event) {
+              const button = event.relatedTarget;
+              if (!button) return;
+
+              // Limpa o checklist da equipe ao abrir o modal de nova atribuição
+              const containerSubEq = document.getElementById("container-subtarefas-equipe");
+              if (containerSubEq) containerSubEq.innerHTML = "";
+              
+              const collapseEq = document.getElementById("collapseChecklistEquipe");
+              if (collapseEq) {
+                  const bsCollapse = bootstrap.Collapse.getInstance(collapseEq);
+                  if (bsCollapse) bsCollapse.hide();
+              }
+          });
+      }
   });
 </script>
+
 
 {% endblock %}

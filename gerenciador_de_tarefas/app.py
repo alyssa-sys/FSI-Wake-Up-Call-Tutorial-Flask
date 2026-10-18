@@ -429,6 +429,34 @@ def editar_tarefa(tarefa_id):
             tarefa.titulo = titulo
         tarefa.descricao = descricao
 
+        # 📋 Sincronização e salvamento do Checklist na Edição
+        ids_enviados = request.form.getlist('subtarefa_ids[]')
+        titulos_enviados = request.form.getlist('subtarefas_titulos[]')
+
+        # Mapeia subtarefas atuais da tarefa
+        subtarefas_atuais = {sub.id: sub for sub in tarefa.subtarefas}
+        ids_processados = []
+
+        for sub_id, titulo_sub in zip(ids_enviados, titulos_enviados):
+            titulo_sub = titulo_sub.strip()
+            if not titulo_sub:
+                continue
+            
+            if sub_id != 'new' and int(sub_id) in subtarefas_atuais:
+                # Atualiza título da subtarefa existente
+                s_obj = subtarefas_atuais[int(sub_id)]
+                s_obj.titulo = titulo_sub
+                ids_processados.append(s_obj.id)
+            else:
+                # Adiciona nova subtarefa
+                nova_sub = Subtarefa(tarefa_id=tarefa.id, titulo=titulo_sub, concluida=False)
+                db.session.add(nova_sub)
+
+        # Remove subtarefas que foram deletadas na interface
+        for s_id, s_obj in subtarefas_atuais.items():
+            if s_id not in ids_processados:
+                db.session.delete(s_obj)
+
     db.session.commit()
     flash('Tarefa atualizada com sucesso!', 'success')
     return redirect(request.referrer or url_for('quadro'))
@@ -485,7 +513,8 @@ def quadro():
     if filtro_equipe == 'minhas':
         base_tarefas = Tarefa.query.filter(
             Tarefa.responsavel_id == current_user.id,
-            Tarefa.equipe_id.is_(None)
+            Tarefa.equipe_id.is_(None),
+            Tarefa.aceite == 'aceita'
         ).all()
     elif filtro_equipe != 'todas' and filtro_equipe.isdigit():
         eq_id = int(filtro_equipe)
@@ -494,11 +523,12 @@ def quadro():
         ids_equipes = [e.id for e in equipes_usuario]
         tarefas_indiv = Tarefa.query.filter(
             Tarefa.responsavel_id == current_user.id,
-            Tarefa.equipe_id.is_(None)
+            Tarefa.equipe_id.is_(None),
+            Tarefa.aceite == 'aceita'
         ).all()
         tarefas_eqp = Tarefa.query.filter(Tarefa.equipe_id.in_(ids_equipes)).all() if ids_equipes else []
         base_tarefas = list({t.id: t for t in (tarefas_indiv + tarefas_eqp)}.values())
-    
+
     tarefas = filtrar_tarefas(base_tarefas)
 
     # Lógica de Ordenação persistida
@@ -584,16 +614,20 @@ def ver_equipe(equipe_id):
     tarefas = filtrar_tarefas(Tarefa.query.filter_by(equipe_id=equipe.id).all())
 
     convidaveis = []
+    total_contatos = 0
     if eh_dono(equipe):
         ja = {m.usuario_id for m in equipe.membros} | {c.convidado_id for c in equipe.convites}
-        convidaveis = [u for u in contatos_aceitos() if u.id not in ja]
+        meus_contatos = contatos_aceitos()
+        total_contatos = len(meus_contatos)
+        convidaveis = [u for u in meus_contatos if u.id not in ja]
 
     return render_template('equipe.html', equipe=equipe, tarefas=tarefas,
                            membros=equipe.membros, dono=eh_dono(equipe),
                            grafico=contar_status(tarefas),
                            pessoas=[m.usuario for m in equipe.membros],
                            filtrando=filtro_ativo(),
-                           convidaveis=convidaveis)
+                           convidaveis=convidaveis,
+                           total_contatos=total_contatos)
 
 #adicionar tarefa equipe
 @app.route('/equipes/<int:equipe_id>/adicionar_tarefa', methods=['GET', 'POST'])
@@ -627,7 +661,15 @@ def adicionar_tarefa_equipe(equipe_id):
 
         nova_tarefa = Tarefa(titulo=titulo, descricao=descricao, status='Pendente', prioridade=prioridade, prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id, equipe_id=equipe.id) # type: ignore
         db.session.add(nova_tarefa)
-        db.session.commit()
+        db.session.flush()
+
+        for subtitulo in request.form.getlist('subtarefas[]'):
+            if subtitulo.strip():
+                sub = Subtarefa(tarefa_id=nova_tarefa.id, titulo=subtitulo.strip())
+                db.session.add(sub)
+
+        db.session.commit()  # <--- 3. Salva tudo no banco de dados de uma vez
+
         flash('Tarefa atribuida!', 'success')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
@@ -825,11 +867,13 @@ def ver_categoria(categoria_id):
     dentro = [t for t in todas if t.categoria_id == categoria.id]
     disponiveis = [t for t in todas if t.categoria_id != categoria.id]
     ja = {cs.usuario_id for cs in categoria.compartilhamentos}
-    convidaveis = [u for u in contatos_aceitos() if u.id not in ja]
+    meus_contatos = contatos_aceitos()
+    convidaveis = [u for u in meus_contatos if u.id not in ja]
     return render_template('categoria.html', categoria=categoria,
                            tarefas=dentro, disponiveis=disponiveis,
                            compartilhamentos=categoria.compartilhamentos,
-                           convidaveis=convidaveis)
+                           convidaveis=convidaveis,
+                           total_contatos=len(meus_contatos))
 
 #adicionar a uma categoria
 @app.route('/categorias/<int:categoria_id>/adicionar', methods=['POST'])

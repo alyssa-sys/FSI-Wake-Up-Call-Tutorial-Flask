@@ -3,10 +3,10 @@
    - Superfícies planas, bordas finas, sem blur, sem brilho, quase sem sombra
    - Cor de destaque só em botões, item ativo, links e gráficos
    - Modo claro/escuro: :root[data-bs-theme="light|dark"]  (definido no base.html)
-   - Paletas: :root[data-paleta="padrao|indigo|oceano|rosa|daltonismo"]
+   - Paletas pastel: :root[data-paleta="padrao|indigo|oceano|rosa"]  (verde, roxo, azul, rosa)
    ========================================================================== */
 
-/* ===== Variáveis: modo claro, paleta Verde (padrão) ===== */
+/* ===== Variáveis: modo claro, paleta Verde pastel (padrão) ===== */
 :root {
     --cor-fundo: #fafafa;
     --cor-superficie: #ffffff;
@@ -17,14 +17,16 @@
     --cor-lateral: #ffffff;
     --sombra: rgba(0, 0, 0, .08);
 
-    --cor-primaria: #14855a;
-    --cor-primaria-escura: #0f6b48;
-    --cor-primaria-suave: #d8f0e3;
-    --cor-primaria-clara: #1f9d6a;
-    --cor-grad-fim: #0f6b48;
-    --cor-foco: rgba(20, 133, 90, .22);
-    --cor-sobre-primaria: #ffffff;
-    --cor-link: var(--cor-primaria);
+    /* Cores pastel: o botão é claro, então o texto sobre ele é escuro.
+       --cor-link é um tom mais fechado, para o texto continuar legível no fundo claro. */
+    --cor-primaria: #8fd6ae;
+    --cor-primaria-escura: #76c698;
+    --cor-primaria-suave: #e1f4e9;
+    --cor-primaria-clara: #a9e2c1;
+    --cor-grad-fim: #76c698;
+    --cor-foco: rgba(143, 214, 174, .45);
+    --cor-sobre-primaria: #10281b;
+    --cor-link: #2d8657;
 
     --status-pendente: #0aa4c4;   --status-pendente-texto: #000;
     --status-andamento: #e0a100;  --status-andamento-texto: #000;
@@ -40,44 +42,36 @@
     --bs-border-color: var(--cor-borda);
 }
 
-/* ===== Paletas ===== */
+/* ===== Paletas pastel: roxo (indigo), azul (oceano) e rosa ===== */
 :root[data-paleta="indigo"] {
-    --cor-primaria: #4f46e5;
-    --cor-primaria-escura: #4338ca;
-    --cor-primaria-suave: #e0e7ff;
-    --cor-primaria-clara: #818cf8;
-    --cor-grad-fim: #7c3aed;
-    --cor-foco: rgba(79, 70, 229, .22);
+    --cor-primaria: #b9aaf0;
+    --cor-primaria-escura: #a595e6;
+    --cor-primaria-suave: #ece8fb;
+    --cor-primaria-clara: #cfc4f7;
+    --cor-grad-fim: #a595e6;
+    --cor-foco: rgba(185, 170, 240, .45);
+    --cor-sobre-primaria: #1f1747;
+    --cor-link: #5b4bc4;
 }
 :root[data-paleta="oceano"] {
-    --cor-primaria: #0e7490;
-    --cor-primaria-escura: #155e75;
-    --cor-primaria-suave: #cffafe;
-    --cor-primaria-clara: #22d3ee;
-    --cor-grad-fim: #0891b2;
-    --cor-foco: rgba(14, 116, 144, .25);
+    --cor-primaria: #9dcbf0;
+    --cor-primaria-escura: #84b9e6;
+    --cor-primaria-suave: #e4f1fb;
+    --cor-primaria-clara: #b9dcf7;
+    --cor-grad-fim: #84b9e6;
+    --cor-foco: rgba(157, 203, 240, .45);
+    --cor-sobre-primaria: #0c2740;
+    --cor-link: #1f6aa8;
 }
 :root[data-paleta="rosa"] {
-    --cor-primaria: #be185d;
-    --cor-primaria-escura: #9d174d;
-    --cor-primaria-suave: #fce7f3;
-    --cor-primaria-clara: #f472b6;
-    --cor-grad-fim: #db2777;
-    --cor-foco: rgba(190, 24, 93, .25);
-}
-/* Daltonismo: paleta Okabe-Ito, pensada para os tipos mais comuns */
-:root[data-paleta="daltonismo"] {
-    --cor-primaria: #0072B2;
-    --cor-primaria-escura: #005a8c;
-    --cor-primaria-suave: #cce4f2;
-    --cor-primaria-clara: #56B4E9;
-    --cor-grad-fim: #004b75;
-    --cor-foco: rgba(0, 114, 178, .3);
-
-    --status-pendente: #56B4E9;   --status-pendente-texto: #000;
-    --status-andamento: #F0E442;  --status-andamento-texto: #000;
-    --status-concluida: #0072B2;  --status-concluida-texto: #fff;
-    --status-cancelada: #D55E00;  --status-cancelada-texto: #000;
+    --cor-primaria: #f4b3ce;
+    --cor-primaria-escura: #ec99bc;
+    --cor-primaria-suave: #fce8f1;
+    --cor-primaria-clara: #f8cade;
+    --cor-grad-fim: #ec99bc;
+    --cor-foco: rgba(244, 179, 206, .5);
+    --cor-sobre-primaria: #4a1230;
+    --cor-link: #b03a6e;
 }
 
 /* ===== Modo escuro (deve ficar depois das paletas) ===== */
@@ -98,18 +92,7 @@
     --status-concluida: #6fd19a;  --status-concluida-texto: #000;
     --status-cancelada: #e0735f;  --status-cancelada-texto: #000;
 }
-/* verde claro só no escuro + paleta padrão (as outras paletas mantêm a cor delas) */
-:root[data-bs-theme="dark"][data-paleta="padrao"] {
-    --cor-primaria: #7fd8a0;
-    --cor-primaria-escura: #62c488;
-    --cor-primaria-clara: #7fd8a0;
-    --cor-foco: rgba(127, 216, 160, .28);
-    --cor-sobre-primaria: #0b100e;
-}
-:root[data-bs-theme="dark"][data-paleta="daltonismo"] {
-    --status-pendente: #56B4E9; --status-andamento: #F0E442;
-    --status-concluida: #4aa3df; --status-cancelada: #E8782A;
-}
+/* O fundo (claro e escuro) é neutro e igual em todas as paletas: só as cores de destaque mudam. */
 
 /* ===== Base ===== */
 body {
@@ -438,6 +421,17 @@ textarea.form-control { border-radius: var(--raio-peq); }
 .barra > div, .barra-preenchida { height: 100%; border-radius: 4px; background: var(--cor-primaria); }
 .link-suave { font-size: .8rem; font-weight: 500; text-decoration: none; }
 .link-suave:hover { text-decoration: underline; }
+
+/* Lista de categorias do quadro (card "Categorias"): linhas separadas por espaço.
+   Classe própria porque .cat-linha também é usada na tela de categoria (checkboxes). */
+.cat-resumo-lista { display: flex; flex-direction: column; gap: 12px; }
+.cat-resumo-item {
+    display: flex; align-items: center; gap: 12px; margin: 0; padding: .8rem .95rem;
+    background: var(--cor-fundo); border: 1px solid var(--cor-borda); border-radius: 12px;
+    color: var(--cor-texto); text-decoration: none;
+    transition: border-color .15s;
+}
+.cat-resumo-item:hover, .cat-resumo-item:focus-visible { color: var(--cor-texto); border-color: var(--cor-suave); }
 
 /* ===== Quadro: filtros ===== */
 .filtros { padding: 12px 16px; margin-bottom: 20px; border-radius: var(--raio); }
@@ -851,6 +845,15 @@ textarea.form-control { border-radius: 14px; }
 .eqp-progresso span { min-width: 2.6em; text-align: right; color: var(--cor-suave); font-size: .85rem; font-weight: 600; }
 
 .eqp-membros { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
+.eqp-cab-dir { display: flex; align-items: center; gap: 12px; }
+.eqp-ver-mais {
+    padding: 0; border: 0; background: none; cursor: pointer;
+    color: var(--cor-link); font-size: .85rem; font-weight: 600;
+}
+.eqp-ver-mais:hover, .eqp-ver-mais:focus-visible { text-decoration: underline; }
+.eqp-mais-info { margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--cor-borda); font-size: .85rem; }
+.eqp-membros-todos { display: flex; flex-direction: column; }
+.eqp-membros-todos .eqp-membro:first-child { padding-top: 0; }
 .eqp-membro { display: flex; align-items: center; gap: 12px; padding: .6rem 0; }
 .eqp-membro:first-child { padding-top: 0; }
 .eqp-membro + .eqp-membro { border-top: 1px solid var(--cor-borda); }
@@ -974,6 +977,19 @@ textarea.form-control { border-radius: 14px; }
 .cat-linha .form-check-input { flex: none; width: 20px; height: 20px; margin: 0; cursor: pointer; }
 .cat-linha-em { color: var(--cor-suave); font-size: .8rem; }
 .cat-adicionar { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.25rem; }
+
+/* Compartilhar com contatos (categoria.html): blocos com o mesmo espaço entre si */
+.cat-comp { display: flex; flex-direction: column; gap: 1.25rem; }
+.cat-comp .eq-secao-cab { margin-bottom: 0; }
+.cat-comp .eqp-card-titulo { margin: 0; }
+.cat-comp-intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.25rem; }
+.cat-comp-intro .eqp-ajuda { flex: 1 1 260px; }
+.cat-comp-bloco { padding-top: 1.25rem; border-top: 1px solid var(--cor-borda); }
+.cat-comp-sub { margin: 0 0 .85rem; font-size: .85rem; font-weight: 600; color: var(--cor-suave); letter-spacing: 0; }
+.cat-comp-lista .eqp-membro:first-child { padding-top: 0; }
+.cat-comp-lista .eqp-membro:last-child { padding-bottom: 0; }
+.cat-comp-form { display: flex; flex-wrap: wrap; gap: 10px; }
+.cat-comp-form .form-select { flex: 1 1 240px; min-width: 0; }
 
 /* ==========================================================================
    Formulário de tarefa (adicionar_tarefa.html e editar_tarefa.html).
