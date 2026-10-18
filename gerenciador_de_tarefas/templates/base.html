@@ -321,7 +321,7 @@
                         <div class="mb-3">
                             <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center" 
                                     type="button" data-bs-toggle="collapse" data-bs-target="#collapseChecklist" aria-expanded="false">
-                                <span>📋 Adicionar checklist / subtarefas (opcional)</span>
+                                <span>Checklist (opcional)</span>
                                 <small class="text-secondary">Opcional</small>
                             </button>
                             <div class="collapse mt-2" id="collapseChecklist">
@@ -395,6 +395,24 @@
                             <textarea id="editDescricao" name="descricao" class="form-control bg-dark text-light border-secondary" rows="3"></textarea>
                         </div>
 
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center" 
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseChecklistEditar" aria-expanded="false">
+                                <span>Checklist (opcional)</span>
+                                <small class="text-secondary">Opcional</small>
+                            </button>
+                            <div class="collapse mt-2" id="collapseChecklistEditar">
+                                <div class="p-3 border rounded border-secondary" style="background-color: var(--cor-fundo, #1a1a1a);">
+                                    <div id="container-subtarefas-editar" class="d-flex flex-column gap-2 mb-2">
+                                        <!-- Subtarefas existentes e novas injetadas via JS -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="adicionarCampoSubtarefaEditar()">
+                                        + Adicionar item
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label small text-secondary" for="editStatus">Status</label>
@@ -461,6 +479,24 @@
                         <div class="mb-3">
                             <label class="form-label small text-secondary" for="eqDescricao">Descrição</label>
                             <textarea id="eqDescricao" name="descricao" class="form-control bg-dark text-light border-secondary" rows="3" placeholder="Detalhes adicionais (opcional)"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center" 
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseChecklistEquipe" aria-expanded="false">
+                                <span>Checklist (opcional)</span>
+                                <small class="text-secondary">Opcional</small>
+                            </button>
+                            <div class="collapse mt-2" id="collapseChecklistEquipe">
+                                <div class="p-3 border rounded border-secondary" style="background-color: var(--cor-fundo, #1a1a1a);">
+                                    <div id="container-subtarefas-equipe" class="d-flex flex-column gap-2 mb-2">
+                                        <!-- Subtarefas adicionadas via JS -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="adicionarCampoSubtarefaEquipe()">
+                                        + Adicionar item
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -628,6 +664,41 @@
                 });
             }
         });
+    </script>
+
+    <script>
+        function adicionarCampoSubtarefaEditar(valor = '', subId = null, concluida = false) {
+            const container = document.getElementById('container-subtarefas-editar');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'd-flex align-items-center gap-2 subtarefa-input-row';
+            
+            // Se a subtarefa já existe no banco, mandamos o ID para tratarmos na edição/atualização se necessário
+            const hiddenId = subId ? `<input type="hidden" name="subtarefa_ids[]" value="${subId}">` : `<input type="hidden" name="subtarefa_ids[]" value="new">`;
+            const checkedAttr = concluida ? 'checked' : '';
+
+            div.innerHTML = `
+                ${hiddenId}
+                <input type="checkbox" name="subtarefas_concluidas[]" value="${subId || 'new'}" class="form-check-input m-0" ${checkedAttr} style="display:none;">
+                <input type="text" name="subtarefas_titulos[]" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Item do checklist" value="${valor}">
+                <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1" onclick="this.closest('.subtarefa-input-row').remove()">✕</button>
+            `;
+            container.appendChild(div);
+        }
+    </script>
+
+    <script>
+        function adicionarCampoSubtarefaEquipe(valor = '') {
+            const container = document.getElementById('container-subtarefas-equipe');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = 'd-flex align-items-center gap-2 subtarefa-input-row';
+            div.innerHTML = `
+                <input type="text" name="subtarefas[]" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Item do checklist" value="${valor}">
+                <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1" onclick="this.closest('.subtarefa-input-row').remove()">✕</button>
+            `;
+            container.appendChild(div);
+        }
     </script>
 
   </body>

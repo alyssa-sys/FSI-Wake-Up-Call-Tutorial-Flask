@@ -518,7 +518,25 @@
               }
           });
       }
+      const modalEl = document.getElementById("modalAtribuirTarefaEquipe");
+      if (modalEl) {
+          modalEl.addEventListener("show.bs.modal", function (event) {
+              const button = event.relatedTarget;
+              if (!button) return;
+
+              // Limpa o checklist da equipe ao abrir o modal de nova atribuição
+              const containerSubEq = document.getElementById("container-subtarefas-equipe");
+              if (containerSubEq) containerSubEq.innerHTML = "";
+              
+              const collapseEq = document.getElementById("collapseChecklistEquipe");
+              if (collapseEq) {
+                  const bsCollapse = bootstrap.Collapse.getInstance(collapseEq);
+                  if (bsCollapse) bsCollapse.hide();
+              }
+          });
+      }
   });
 </script>
+
 
 {% endblock %}

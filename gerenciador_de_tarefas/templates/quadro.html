@@ -132,7 +132,7 @@
                       data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
                       data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
                       data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
-                      data-subtarefas='{{ subs_json | tojson | safe }}'> <!-- 📋 ADICIONE ESTE ATRIBUTO -->
+                      data-subtarefas='{{ subs_json | tojson | safe }}'>
                       <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
                       {% if tarefa.descricao %}
                           <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
@@ -189,7 +189,8 @@
                                 data-status="{{ tarefa.status }}"
                                 data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
                                 data-categoria="{{ tarefa.categoria_id or '' }}"
-                                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}">
+                                data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
+                                data-subtarefas='{{ subs_json | tojson | safe }}'>
                             Editar
                         </button>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
@@ -272,19 +273,38 @@
       if (modalEditar) {
           modalEditar.addEventListener("show.bs.modal", function (event) {
               const button = event.relatedTarget;
+              if (!button) return;
               
-              document.getElementById("formEditarTarefa").action = button.dataset.action;
-              document.getElementById("editTitulo").value = button.dataset.titulo;
-              document.getElementById("editDescricao").value = button.dataset.descricao;
-              document.getElementById("editStatus").value = button.dataset.status;
-              document.getElementById("editPrioridade").value = button.dataset.prioridade;
-              document.getElementById("editCategoria").value = button.dataset.categoria;
+              document.getElementById("formEditarTarefa").action = button.dataset.action || "";
+              document.getElementById("editTitulo").value = button.dataset.titulo || "";
+              document.getElementById("editDescricao").value = button.dataset.descricao || "";
+              document.getElementById("editStatus").value = button.dataset.status || "Pendente";
+              document.getElementById("editPrioridade").value = button.dataset.prioridade || "A definir";
+              
+              const editCat = document.getElementById("editCategoria");
+              if (editCat) {
+                  editCat.value = button.dataset.categoria || "";
+              }
               
               if (fpEdit) {
                   if (button.dataset.prazo) {
                       fpEdit.setDate(button.dataset.prazo, true, "d/m/Y H:i");
                   } else {
                       fpEdit.clear();
+                  }
+              }
+
+              // 📋 Popula o checklist existente no modal de edição
+              const containerSubEdit = document.getElementById("container-subtarefas-editar");
+              if (containerSubEdit) {
+                  containerSubEdit.innerHTML = "";
+                  try {
+                      const subtarefas = JSON.parse(button.dataset.subtarefas || "[]");
+                      subtarefas.forEach(sub => {
+                          adicionarCampoSubtarefaEditar(sub.titulo, sub.id, sub.concluida);
+                      });
+                  } catch(e) {
+                      console.error("Erro ao carregar subtarefas para edição", e);
                   }
               }
           });
@@ -312,6 +332,7 @@
         btnEditar.dataset.prioridade = d.prioridade || 'A definir';
         btnEditar.dataset.categoria = d.categoriaId || '';
         btnEditar.dataset.prazo = d.prazo || '';
+        btnEditar.dataset.subtarefas = d.subtarefas || '[]';
         
         const wrapper = document.getElementById('modalChecklistWrapper');
         const container = document.getElementById('modalChecklistContainer');
