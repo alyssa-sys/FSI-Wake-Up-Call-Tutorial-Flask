@@ -63,6 +63,17 @@
         </label>
         {% endif %}
 
+        <label class="filtro-campo">Ordenar por
+            <select name="ordenacao" class="form-select" onchange="this.form.submit()">
+                <option value="padrao" {% if ordenacao_atual == 'padrao' %}selected{% endif %}>Padrão (Criação)</option>
+                <option value="prioridade_desc" {% if ordenacao_atual == 'prioridade_desc' %}selected{% endif %}>Prioridade (Alta → Baixa)</option>
+                <option value="prioridade_asc" {% if ordenacao_atual == 'prioridade_asc' %}selected{% endif %}>Prioridade (Baixa → Alta)</option>
+                <option value="prazo" {% if ordenacao_atual == 'prazo' %}selected{% endif %}>Prazo (Mais próximo)</option>
+                <option value="titulo" {% if ordenacao_atual == 'titulo' %}selected{% endif %}>Título (A - Z)</option>
+                <option value="status" {% if ordenacao_atual == 'status' %}selected{% endif %}>Status</option>
+            </select>
+        </label>
+
         <div class="filtros-botoes">
             {% if filtrando %}
             <a href="{{ request.path }}" class="btn btn-outline-secondary">Limpar</a>

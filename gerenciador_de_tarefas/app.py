@@ -374,16 +374,44 @@ def excluir_tarefa(tarefa_id):
 @app.route('/quadro')
 @login_required
 def quadro():
+    # Verifica se o usuário escolheu uma nova ordenação na requisição
+    nova_ordenacao = request.args.get('ordenacao')
+    if nova_ordenacao:
+        current_user.ordenacao_quadro = nova_ordenacao
+        db.session.commit()
+
     minhas = Tarefa.query.filter(
         Tarefa.responsavel_id == current_user.id,
         Tarefa.equipe_id.is_(None)
     ).all()
+    
     tarefas = filtrar_tarefas(minhas)
+
+    # Lógica de Ordenação persistida
+    ordem = current_user.ordenacao_quadro
+    if ordem == 'prioridade_desc':
+        # Alta (1), Média (2), Baixa (3), A definir (4)
+        peso_prio = {'Alta': 1, 'Média': 2, 'Baixa': 3, 'A definir': 4}
+        tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
+    elif ordem == 'prioridade_asc':
+        # Baixa (1), Média (2), Alta (3), A definir (4)
+        peso_prio = {'Baixa': 1, 'Média': 2, 'Alta': 3, 'A definir': 4}
+        tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
+    elif ordem == 'prazo':
+        # Tarefas com prazo primeiro (mais próximas), sem prazo por último
+        tarefas.sort(key=lambda t: (t.prazo is None, t.prazo))
+    elif ordem == 'titulo':
+        tarefas.sort(key=lambda t: t.titulo.lower())
+    elif ordem == 'status':
+        peso_status = {'Pendente': 1, 'Em andamento': 2, 'Concluída': 3, 'Cancelada': 4}
+        tarefas.sort(key=lambda t: peso_status.get(t.status, 5))
+        
     return render_template('quadro.html',
                            tarefas=tarefas,
                            grafico=contar_status(tarefas),
                            categorias=categorias_do_usuario(),
-                           filtrando=filtro_ativo())
+                           filtrando=filtro_ativo(),
+                           ordenacao_atual=ordem)
 
 #rota das equipes
 @app.route('/equipes')

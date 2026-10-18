@@ -12,6 +12,7 @@ class Usuario(db.Model, UserMixin):
     tarefasAtribuidas = db.relationship('Tarefa', backref='responsavel', foreign_keys='Tarefa.responsavel_id', lazy=True)
     cargo = db.Column(db.String(20), nullable=False, default='usuario') #admin ou usuario
     foto_perfil = db.Column(db.String(200), nullable=True, default='default.png')
+    ordenacao_quadro = db.Column(db.String(30), nullable=False, default='padrao')
     # # Tabela de associação para conexões entre usuários
     # conexoes = db.Table('conexoes',
     # db.Column('usuario_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True),

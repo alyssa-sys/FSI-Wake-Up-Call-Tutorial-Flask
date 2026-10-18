@@ -102,44 +102,47 @@
     {% set lista = tarefas|selectattr('status', 'equalto', nome_status)|list %}
     <div class="col-12 col-md-6 col-xl-3">
         <div class="coluna {{ classe_status }}">
+            <!-- Cabeçalho fixo no topo da coluna -->
             <div class="coluna-topo">
                 <span class="ponto"></span>
                 <h2>{{ nome_status }}</h2>
                 <span class="contador">{{ lista|length }}</span>
             </div>
 
-            {% for tarefa in lista %}
-            {% set atrasada = tarefa_atrasada(tarefa) %}
-            <div class="cartao-tarefa">
-                <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
-                     data-titulo="{{ tarefa.titulo }}"
-                     data-descricao="{{ tarefa.descricao or '' }}"
-                     data-status="{{ tarefa.status }}"
-                     data-cor="{{ cor_badge }}"
-                     data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
-                     data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
-                     data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
-                     data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
-                    <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
-                    {% if tarefa.descricao %}
-                        <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
-                    {% endif %}
-                    {% set prio = tarefa.prioridade or 'A definir' %}
-                    <div class="chips">
-                        <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
-                        {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
-                        <span class="chip">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{{ tarefa.categoria.nome }}
-                        </span>
-                        {% endif %}
-                        {% if tarefa.prazo %}
-                        <span class="chip {{ 'chip-atrasada' if atrasada }}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                            {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
+            <!-- Container rolável apenas para os cartões -->
+            <div class="coluna-conteudo">
+                {% for tarefa in lista %}
+              {% set atrasada = tarefa_atrasada(tarefa) %}
+              <div class="cartao-tarefa">
+                  <div class="area-clique" data-bs-toggle="modal" data-bs-target="#modalTarefa"
+                      data-titulo="{{ tarefa.titulo }}"
+                      data-descricao="{{ tarefa.descricao or '' }}"
+                      data-status="{{ tarefa.status }}"
+                      data-cor="{{ cor_badge }}"
+                      data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                      data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
+                      data-categoria="{{ tarefa.categoria.nome if tarefa.categoria else '' }}"
+                      data-editar="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}">
+                      <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
+                      {% if tarefa.descricao %}
+                          <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
+                      {% endif %}
+                      {% set prio = tarefa.prioridade or 'A definir' %}
+                      <div class="chips">
+                          <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+                          {% if tarefa.categoria and tarefa.criador_id == current_user.id %}
+                          <span class="chip">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>{{ tarefa.categoria.nome }}
+                          </span>
+                          {% endif %}
+                          {% if tarefa.prazo %}
+                          <span class="chip {{ 'chip-atrasada' if atrasada }}">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                              {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}
+                          </span>
+                          {% endif %}
+                      </div>
+                  </div>
 
                 <!-- Botão individual de Exportação com Pop-up (Dropdown) para cada tarefa -->
                 <div class="dropdown mt-2">
@@ -189,6 +192,7 @@
             {% else %}
                 <p class="text-secondary small text-center py-3 mb-0">Nenhuma tarefa</p>
             {% endfor %}
+            </div>
         </div>
     </div>
     {% endfor %}
