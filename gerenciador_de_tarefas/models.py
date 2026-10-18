@@ -13,7 +13,6 @@ class Usuario(db.Model, UserMixin):
     cargo = db.Column(db.String(20), nullable=False, default='usuario') #admin ou usuario
     foto_perfil = db.Column(db.String(200), nullable=True, default='default.png')
     # # Tabela de associação para conexões entre usuários
-    # conexoes = db.Table('conexoes',
     # db.Column('usuario_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True),
     # db.Column('amigo_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True))
 
@@ -28,6 +27,7 @@ class Tarefa(db.Model):
     responsavel_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=True)
+    aceite = db.Column(db.String(20), nullable=False, default='aceita', server_default='aceita')
 
 class Equipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -50,3 +50,33 @@ class Categoria(db.Model):
     nome = db.Column(db.String(50), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tarefas = db.relationship('Tarefa', backref='categoria', lazy=True)
+    dono = db.relationship('Usuario')
+
+class Contato(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    destinatario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='pendente')
+    criado_em = db.Column(db.DateTime, default=datetime.now)
+    solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
+    destinatario = db.relationship('Usuario', foreign_keys=[destinatario_id])
+    __table_args__ = (db.UniqueConstraint('solicitante_id', 'destinatario_id'),)
+
+class ConviteEquipe(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=False)
+    convidado_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    convidante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    criado_em = db.Column(db.DateTime, default=datetime.now)
+    equipe = db.relationship('Equipe', backref=db.backref('convites', cascade='all, delete-orphan'))
+    convidado = db.relationship('Usuario', foreign_keys=[convidado_id])
+    convidante = db.relationship('Usuario', foreign_keys=[convidante_id])
+    __table_args__ = (db.UniqueConstraint('equipe_id', 'convidado_id'),)
+
+class CategoriaCompartilhada(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    categoria = db.relationship('Categoria', backref=db.backref('compartilhamentos', cascade='all, delete-orphan'))
+    usuario = db.relationship('Usuario')
+    __table_args__ = (db.UniqueConstraint('categoria_id', 'usuario_id'),)
