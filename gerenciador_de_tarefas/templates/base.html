@@ -9,6 +9,7 @@
         try {
           var modo = localStorage.getItem("tema-modo") || "auto";
           var paleta = localStorage.getItem("tema-paleta") || "padrao";
+          if (["padrao", "indigo", "oceano", "rosa"].indexOf(paleta) === -1) paleta = "padrao";
           var escuro =
             modo === "escuro" ||
             (modo === "auto" &&
@@ -65,10 +66,9 @@
         <div class="small text-secondary mb-1">Paleta</div>
         <div class="d-grid gap-1">
           <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="padrao">Verde (padrão)</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="indigo">Índigo</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="oceano">Oceano</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="indigo">Roxo</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="oceano">Azul</button>
           <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="rosa">Rosa</button>
-          <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-opcao-paleta="daltonismo">Daltonismo (azul e laranja)</button>
         </div>
       </div>
     </div>
@@ -207,6 +207,7 @@
         function aplicar() {
           var modo = ler("tema-modo", "auto");
           var paleta = ler("tema-paleta", "padrao");
+          if (["padrao", "indigo", "oceano", "rosa"].indexOf(paleta) === -1) paleta = "padrao"; // ex.: "daltonismo" salvo antes
           var escuro = modo === "escuro" || (modo === "auto" && midia.matches);
           raiz.setAttribute("data-bs-theme", escuro ? "dark" : "light");
           raiz.setAttribute("data-paleta", paleta);
@@ -631,4 +632,3 @@
 
   </body>
 </html>
-
