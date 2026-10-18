@@ -63,6 +63,18 @@
         </label>
         {% endif %}
 
+        {% if equipes_usuario is defined %}
+        <label class="filtro-campo">Equipe
+            <select name="equipe" class="form-select">
+                <option value="todas" {% if request.args.get('equipe', 'todas') == 'todas' %}selected{% endif %}>Todas as equipes</option>
+                <option value="minhas" {% if request.args.get('equipe') == 'minhas' %}selected{% endif %}>Apenas pessoais</option>
+                {% for eq in equipes_usuario %}
+                <option value="{{ eq.id }}" {% if request.args.get('equipe') == eq.id|string %}selected{% endif %}>{{ eq.nome }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% endif %}
+
         <label class="filtro-campo">Ordenar por
             <select name="ordenacao" class="form-select" onchange="this.form.submit()">
                 <option value="padrao" {% if ordenacao_atual == 'padrao' %}selected{% endif %}>Padrão (Criação)</option>

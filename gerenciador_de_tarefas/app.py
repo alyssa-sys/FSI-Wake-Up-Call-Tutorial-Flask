@@ -87,7 +87,7 @@ def eh_dono(equipe):
 def gerar_codigo():
     return secrets.token_hex(3).upper()
 
-CHAVES_FILTRO = ['q', 'status', 'prioridade', 'prazo', 'responsavel', 'categoria']
+CHAVES_FILTRO = ['q', 'status', 'prioridade', 'prazo', 'responsavel', 'categoria', 'equipe']
 
 def filtro_ativo():
     return any(request.args.get(k) for k in CHAVES_FILTRO)
@@ -380,12 +380,27 @@ def quadro():
         current_user.ordenacao_quadro = nova_ordenacao
         db.session.commit()
 
-    minhas = Tarefa.query.filter(
-        Tarefa.responsavel_id == current_user.id,
-        Tarefa.equipe_id.is_(None)
-    ).all()
+    equipes_usuario = [m.equipe for m in MembroEquipe.query.filter_by(usuario_id=current_user.id).all()]
+    filtro_equipe = request.args.get('equipe', 'todas')
+
+    if filtro_equipe == 'minhas':
+        base_tarefas = Tarefa.query.filter(
+            Tarefa.responsavel_id == current_user.id,
+            Tarefa.equipe_id.is_(None)
+        ).all()
+    elif filtro_equipe != 'todas' and filtro_equipe.isdigit():
+        eq_id = int(filtro_equipe)
+        base_tarefas = Tarefa.query.filter_by(equipe_id=eq_id).all()
+    else:
+        ids_equipes = [e.id for e in equipes_usuario]
+        tarefas_indiv = Tarefa.query.filter(
+            Tarefa.responsavel_id == current_user.id,
+            Tarefa.equipe_id.is_(None)
+        ).all()
+        tarefas_eqp = Tarefa.query.filter(Tarefa.equipe_id.in_(ids_equipes)).all() if ids_equipes else []
+        base_tarefas = list({t.id: t for t in (tarefas_indiv + tarefas_eqp)}.values())
     
-    tarefas = filtrar_tarefas(minhas)
+    tarefas = filtrar_tarefas(base_tarefas)
 
     # Lógica de Ordenação persistida
     ordem = current_user.ordenacao_quadro
@@ -410,6 +425,8 @@ def quadro():
                            tarefas=tarefas,
                            grafico=contar_status(tarefas),
                            categorias=categorias_do_usuario(),
+                           equipes_usuario=equipes_usuario,
+                           equipe_atual=filtro_equipe,
                            filtrando=filtro_ativo(),
                            ordenacao_atual=ordem)
 
