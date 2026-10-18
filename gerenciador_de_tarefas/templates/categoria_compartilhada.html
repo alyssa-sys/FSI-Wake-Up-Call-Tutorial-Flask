@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ categoria.nome }} - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% macro avatar(u) -%}
+    {% if u.foto_perfil and u.foto_perfil != 'default.png' %}
+        <img src="{{ url_for('static', filename='uploads/' + u.foto_perfil) }}" alt="" class="usuario-foto" />
+    {% else %}
+        <span class="usuario-foto">{{ u.nomeUsuario[:1]|upper }}</span>
+    {% endif %}
+{%- endmacro %}
+
+{% set status_classe = {'Pendente': 'status-pendente', 'Em andamento': 'status-andamento', 'Concluída': 'status-concluida', 'Cancelada': 'status-cancelada'} %}
+
+<div class="eq-topo">
+    <div>
+        <h1 class="titulo-pagina">{{ categoria.nome }}</h1>
+        <p class="eq-subtitulo">Categoria compartilhada · criada por {{ categoria.dono.nomeUsuario }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary">Categorias</a>
+        {% if eh_dono_categoria %}
+        <a href="{{ url_for('ver_categoria', categoria_id=categoria.id) }}" class="btn btn-outline-secondary">Gerenciar acesso</a>
+        {% else %}
+        <form method="POST" action="{{ url_for('sair_categoria_compartilhada', categoria_id=categoria.id) }}"
+              onsubmit="return confirm('Sair dessa categoria compartilhada?');">
+            <button type="submit" class="btn btn-outline-danger">Sair da categoria</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{# ---------- Participantes ---------- #}
+<section class="cartao mb-4">
+    <div class="eq-secao-cab">
+        <h2 class="eqp-card-titulo">Participantes</h2>
+        <span class="eq-contagem">{{ membros|length }}</span>
+    </div>
+    <div class="d-flex flex-wrap gap-3">
+        {% for u in membros %}
+        <div class="d-flex align-items-center gap-2">
+            {{ avatar(u) }}
+            <span>{{ u.nomeUsuario }}</span>
+            {% if u.id == categoria.usuario_id %}<span class="eq-tag">dono</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+{# ---------- Nova tarefa ---------- #}
+<section class="cartao mb-4">
+    <h2 class="eqp-card-titulo mb-3">Nova tarefa nesta categoria</h2>
+    <form method="POST" action="{{ url_for('nova_tarefa_categoria', categoria_id=categoria.id) }}">
+        <div class="mb-2">
+            <input type="text" name="titulo" class="form-control" placeholder="Título da tarefa" maxlength="150" required>
+        </div>
+        <div class="mb-2">
+            <textarea name="descricao" class="form-control" rows="2" placeholder="Descrição (opcional)"></textarea>
+        </div>
+        <div class="row g-2 mb-2">
+            <div class="col-md-4">
+                <select name="responsavel_id" class="form-select" aria-label="Responsável">
+                    {% for u in atribuiveis %}
+                    <option value="{{ u.id }}" {% if u.id == current_user.id %}selected{% endif %}>
+                        {{ 'Eu (' ~ u.nomeUsuario ~ ')' if u.id == current_user.id else u.nomeUsuario }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select name="prioridade" class="form-select" aria-label="Prioridade">
+                    {% for p in ['A definir', 'Baixa', 'Média', 'Alta'] %}
+                    <option value="{{ p }}">{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="datetime-local" name="prazo" class="form-control" aria-label="Prazo">
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <button type="submit" class="btn btn-principal btn-sm">Criar tarefa</button>
+            <small class="text-secondary">Tarefas para outra pessoa precisam ser aceitas por ela (limite de {{ limite_tarefas }} aguardando por pessoa).</small>
+        </div>
+    </form>
+</section>
+
+{# ---------- Tarefas ---------- #}
+{% if not tarefas %}
+<p class="cat-vazio">Nenhuma tarefa nesta categoria ainda.</p>
+{% endif %}
+
+<div class="cat-tarefas mb-5">
+    {% for t in tarefas %}
+    {% set prio = t.prioridade or 'A definir' %}
+    <article class="cartao-tarefa cat-tarefa {{ status_classe[t.status] }}">
+        <div class="cat-tarefa-topo">
+            <div class="tarefa-titulo">{{ t.titulo }}</div>
+            <span class="selo">
+                {% if t.aceite == 'aceita' %}{{ t.status }}{% elif t.aceite == 'aguardando' %}Aguardando aceite{% else %}Recusada{% endif %}
+            </span>
+        </div>
+        {% if t.descricao %}
+        <div class="tarefa-desc">{{ t.descricao|truncate(80) }}</div>
+        {% endif %}
+        <div class="chips">
+            <span class="chip">
+                {% if t.criador_id == t.responsavel_id %}{{ t.criador.nomeUsuario }}{% else %}{{ t.criador.nomeUsuario }} → {{ t.responsavel.nomeUsuario }}{% endif %}
+            </span>
+            <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+            {% if t.prazo %}
+            <span class="chip {{ 'chip-atrasada' if tarefa_atrasada(t) }}">{{ t.prazo.strftime('%d/%m/%Y %H:%M') }}</span>
+            {% endif %}
+        </div>
+
+        <div class="cat-tarefa-acoes">
+            {% if t.aceite == 'aceita' and pode_mudar_status(t) %}
+            <form method="POST" action="{{ url_for('alterar_status', tarefa_id=t.id) }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <select name="status" class="form-select form-select-sm" aria-label="Alterar status" onchange="this.form.submit()">
+                    {% for s in ['Pendente', 'Em andamento', 'Concluída', 'Cancelada'] %}
+                    <option value="{{ s }}" {% if t.status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+
+            {% if t.aceite != 'aceita' and t.criador_id == current_user.id %}
+            <form method="POST" action="{{ url_for('cancelar_envio_tarefa', tarefa_id=t.id) }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    {{ 'Cancelar envio' if t.aceite == 'aguardando' else 'Remover' }}
+                </button>
+            </form>
+            {% endif %}
+
+            {% if t.aceite == 'aceita' and pode_excluir(t) %}
+            <form method="POST" action="{{ url_for('excluir_tarefa', tarefa_id=t.id) }}"
+                  onsubmit="return confirm('Excluir esta tarefa?');">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Excluir</button>
+            </form>
+            {% endif %}
+        </div>
+    </article>
+    {% endfor %}
+</div>
+
+{% endblock %}

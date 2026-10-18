@@ -91,4 +91,26 @@
     </div>
 </section>
 
+{% if compartilhadas %}
+<section class="eq-secao mb-5">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Compartilhadas comigo</h2>
+        <span class="eq-contagem">{{ compartilhadas|length }}</span>
+    </div>
+    <div class="cat-lista">
+        {% for cs in compartilhadas %}
+        <div class="cat-card">
+            <a href="{{ url_for('ver_categoria_compartilhada', categoria_id=cs.categoria_id) }}" class="cat-card-link">
+                <span class="eq-inicial" aria-hidden="true">{{ cs.categoria.nome[:1]|upper }}</span>
+                <div class="eq-equipe-corpo">
+                    <div class="eq-equipe-nome">{{ cs.categoria.nome }}</div>
+                    <div class="eq-equipe-meta">de {{ cs.categoria.dono.nomeUsuario }}</div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
 {% endblock %}

@@ -116,4 +116,37 @@
   });
 </script>
 
+{# ---------- Compartilhar com contatos ---------- #}
+<section class="cartao mb-5">
+    <div class="eq-secao-cab">
+        <h2 class="eqp-card-titulo">Compartilhar com contatos</h2>
+        <span class="eq-contagem">{{ compartilhamentos|length }}</span>
+    </div>
+    <p class="eqp-ajuda">Quem tem acesso pode ver, criar e enviar tarefas nesta categoria.</p>
+    <a href="{{ url_for('ver_categoria_compartilhada', categoria_id=categoria.id) }}" class="btn btn-principal btn-sm mb-3">Abrir quadro compartilhado</a>
+
+    {% for cs in compartilhamentos %}
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <span>{{ cs.usuario.nomeUsuario }}</span>
+        <form method="POST" action="{{ url_for('descompartilhar_categoria', categoria_id=categoria.id, usuario_id=cs.usuario_id) }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Remover acesso</button>
+        </form>
+    </div>
+    {% endfor %}
+
+    {% if convidaveis %}
+    <form method="POST" action="{{ url_for('compartilhar_categoria', categoria_id=categoria.id) }}" class="d-flex gap-2 mt-3">
+        <select name="usuario_id" class="form-select" required>
+            <option value="" disabled selected>Escolha um contato</option>
+            {% for u in convidaveis %}
+            <option value="{{ u.id }}">{{ u.nomeUsuario }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-principal">Compartilhar</button>
+    </form>
+    {% else %}
+    <p class="eqp-ajuda mt-3 mb-0">Nenhum contato disponível. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
+    {% endif %}
+</section>
+
 {% endblock %}
