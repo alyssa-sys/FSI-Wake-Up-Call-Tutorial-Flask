@@ -78,10 +78,11 @@
             <h2 class="mb-0">Categorias</h2>
             <a href="{{ url_for('ver_categorias') }}" class="link-suave">Ver pastas</a>
         </div>
+        <div class="cat-resumo-lista">
         {% for c in categorias[:4] %}
             {% set qt = c.tarefas|length %}
             {% set ok = c.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
-            <a class="cat-linha" href="{{ url_for('ver_categoria', categoria_id=c.id) }}">
+            <a class="cat-resumo-item" href="{{ url_for('ver_categoria', categoria_id=c.id) }}">
                 <span class="cat-icone">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                 </span>
@@ -93,6 +94,7 @@
         {% else %}
             <p class="text-secondary small mb-0">Nenhuma categoria ainda. <a href="{{ url_for('ver_categorias') }}">Criar uma pasta</a>.</p>
         {% endfor %}
+        </div>
     </div>
 </section>
 
