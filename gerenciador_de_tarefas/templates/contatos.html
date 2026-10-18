@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Contatos - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% macro avatar(u) -%}
+    {% if u.foto_perfil and u.foto_perfil != 'default.png' %}
+        <img src="{{ url_for('static', filename='uploads/' + u.foto_perfil) }}" alt="" class="usuario-foto" />
+    {% else %}
+        <span class="usuario-foto">{{ u.nomeUsuario[:1]|upper }}</span>
+    {% endif %}
+{%- endmacro %}
+
+{% set rotulo = {'aguardando': 'Aguardando aceite', 'aceita': 'Aceita', 'recusada': 'Recusada'} %}
+
+<div class="eq-topo">
+    <div>
+        <h1 class="titulo-pagina">Contatos</h1>
+        <p class="eq-subtitulo">Adicione pessoas pelo e-mail ou nome de usuário, convide para equipes e envie tarefas.</p>
+    </div>
+    <a href="{{ url_for('notificacoes') }}" class="btn btn-outline-secondary">
+        Notificações{% if n_notificacoes %} ({{ n_notificacoes }}){% endif %}
+    </a>
+</div>
+
+{# ---------- Adicionar contato ---------- #}
+<section class="cartao mb-4">
+    <h2 class="eq-secao-titulo mb-3">Adicionar contato</h2>
+    <form method="POST" action="{{ url_for('adicionar_contato') }}" class="d-flex gap-2 flex-wrap">
+        <input type="text" name="identificador" class="form-control" style="max-width: 420px;"
+               placeholder="E-mail ou nome de usuário" autocomplete="off" required>
+        <button type="submit" class="btn btn-principal">Enviar pedido</button>
+    </form>
+</section>
+
+{# ---------- Meus contatos ---------- #}
+<section class="eq-secao">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Meus contatos</h2>
+        <span class="eq-contagem">{{ contatos|length }}</span>
+    </div>
+
+    {% if contatos %}
+    <div class="cartao">
+        {% for u in contatos %}
+        <div class="py-3 {{ 'border-top' if not loop.first }}">
+            <div class="eqp-membro" style="padding: 0;">
+                {{ avatar(u) }}
+                <div style="flex: 1; min-width: 0;">
+                    <div class="eqp-membro-nome">{{ u.nome or u.nomeUsuario }}</div>
+                    <small class="text-secondary">@{{ u.nomeUsuario }}</small>
+                </div>
+                <button type="button" class="btn btn-principal btn-sm"
+                        data-bs-toggle="collapse" data-bs-target="#enviar-{{ u.id }}">Enviar tarefa</button>
+                <form method="POST" action="{{ url_for('remover_contato', usuario_id=u.id) }}"
+                      onsubmit="return confirm('Remover este contato? Tarefas e convites ainda pendentes entre vocês serão apagados e as categorias compartilhadas deixam de ser compartilhadas.');">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
+                </form>
+            </div>
+
+            <div class="collapse" id="enviar-{{ u.id }}">
+                <form method="POST" action="{{ url_for('enviar_tarefa_contato', usuario_id=u.id) }}" class="mt-3">
+                    <div class="mb-2">
+                        <input type="text" name="titulo" class="form-control" placeholder="Título da tarefa" maxlength="150" required>
+                    </div>
+                    <div class="mb-2">
+                        <textarea name="descricao" class="form-control" rows="2" placeholder="Descrição (opcional)"></textarea>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <select name="prioridade" class="form-select">
+                                {% for p in ['A definir', 'Baixa', 'Média', 'Alta'] %}
+                                <option value="{{ p }}">{{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <input type="datetime-local" name="prazo" class="form-control">
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <button type="submit" class="btn btn-principal btn-sm">Enviar</button>
+                        <small class="text-secondary">
+                            {{ u.nomeUsuario }} precisa aceitar. Aguardando resposta: {{ pendentes_por_contato.get(u.id, 0) }}/{{ limite_tarefas }}
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="eq-vazio">
+        <h3 class="eq-vazio-titulo">Você ainda não tem contatos</h3>
+        <p>Envie um pedido usando o e-mail ou o nome de usuário de alguém.</p>
+    </div>
+    {% endif %}
+</section>
+
+{# ---------- Pedidos enviados ---------- #}
+{% if pedidos_enviados %}
+<section class="eq-secao">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Pedidos enviados</h2>
+        <span class="eq-contagem">{{ pedidos_enviados|length }}</span>
+    </div>
+    <div class="cartao">
+        {% for p in pedidos_enviados %}
+        <div class="eqp-membro">
+            {{ avatar(p.destinatario) }}
+            <div class="eqp-membro-nome">{{ p.destinatario.nomeUsuario }}</div>
+            <span class="eq-tag">Aguardando</span>
+            <form method="POST" action="{{ url_for('cancelar_pedido_contato', contato_id=p.id) }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancelar</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ---------- Tarefas enviadas ---------- #}
+<section class="eq-secao mb-5">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Tarefas que você enviou</h2>
+        <span class="eq-contagem">{{ tarefas_enviadas|length }}</span>
+    </div>
+    {% if tarefas_enviadas %}
+    <div class="cartao">
+        {% for t in tarefas_enviadas %}
+        <div class="eqp-membro">
+            {{ avatar(t.responsavel) }}
+            <div style="flex: 1; min-width: 0;">
+                <div class="eqp-membro-nome">{{ t.titulo }}</div>
+                <small class="text-secondary">para {{ t.responsavel.nomeUsuario }}</small>
+            </div>
+            <span class="eq-tag">{{ rotulo[t.aceite] }}{% if t.aceite == 'aceita' %} · {{ t.status }}{% endif %}</span>
+            {% if t.aceite != 'aceita' %}
+            <form method="POST" action="{{ url_for('cancelar_envio_tarefa', tarefa_id=t.id) }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    {{ 'Cancelar envio' if t.aceite == 'aguardando' else 'Remover' }}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="eqp-ajuda">Você ainda não enviou tarefas para contatos.</p>
+    {% endif %}
+</section>
+
+{% endblock %}

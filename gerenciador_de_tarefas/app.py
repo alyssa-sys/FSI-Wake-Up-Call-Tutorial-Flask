@@ -50,7 +50,7 @@ app.jinja_env.globals.update(link_google_calendar=link_google_calendar)
 @app.context_processor
 def injetar_categorias_globais():
     if current_user.is_authenticated:
-        return dict(categorias_globais=categorias_do_usuario())
+        return dict(categorias_globais=categorias_acessiveis())
     return dict(categorias_globais=[])
 
 @app.context_processor
@@ -186,19 +186,36 @@ def filtrar_tarefas(tarefas):
 def categorias_do_usuario():
     return Categoria.query.filter_by(usuario_id=current_user.id).order_by(Categoria.nome).all()
 
+def categorias_acessiveis():
+    """Minhas categorias + as que outros compartilharam comigo."""
+    proprias = categorias_do_usuario()
+    de_outros = [cs.categoria for cs in CategoriaCompartilhada.query.filter_by(usuario_id=current_user.id).all()]
+    return proprias + sorted(de_outros, key=lambda c: c.nome.lower())
+
+def categoria_acessivel(categoria):
+    if categoria.usuario_id == current_user.id:
+        return True
+    return CategoriaCompartilhada.query.filter_by(
+        categoria_id=categoria.id, usuario_id=current_user.id
+    ).first() is not None
+
+def membros_da_categoria(categoria):
+    return [categoria.dono] + [cs.usuario for cs in categoria.compartilhamentos]
+
 def categoria_valida(valor):
     try:
         cid = int(valor)
     except (TypeError, ValueError):
         return None
-    return cid if cid in {c.id for c in categorias_do_usuario()} else None
+    return cid if cid in {c.id for c in categorias_acessiveis()} else None
 
 def tarefas_individuais():
-    return Tarefa.query.filter(
+    todas = Tarefa.query.filter(
         Tarefa.criador_id == current_user.id,
         Tarefa.responsavel_id == current_user.id,
         Tarefa.equipe_id.is_(None)
     ).all()
+    return [t for t in todas if t.categoria is None or t.categoria.usuario_id == current_user.id]
 
 def contar_status(tarefas_lista):
     contagem = {'Pendente': 0, 'Em andamento': 0, 'Concluída': 0, 'Cancelada': 0}
@@ -226,7 +243,16 @@ def pode_mudar_status(tarefa):
         return True
     return current_user.id == tarefa.responsavel_id and tarefa.aceite == 'aceita'
 
+def proximo_seguro():
+    prox = request.form.get('next', '')
+    if prox.startswith('/') and not prox.startswith('//') and '\\' not in prox:
+        return prox
+    return None
+
 def voltar_para_lista(equipe_id=None):
+    prox = proximo_seguro()
+    if prox:
+        return redirect(prox)
     if equipe_id:
         return redirect(url_for('ver_equipe', equipe_id=equipe_id))
     return redirect(url_for('admin_dashboard') if eh_admin() else url_for('quadro'))
@@ -840,6 +866,19 @@ def aceitar_contato(contato_id):
     return redirect(url_for('notificacoes'))
 
 #recusar contato
+@app.route('/contatos/<int:contato_id>/recusar', methods=['POST'])
+@login_required
+def recusar_contato(contato_id):
+    c = db.get_or_404(Contato, contato_id)
+    if c.destinatario_id != current_user.id or c.status != 'pendente':
+        flash('Pedido inválido.', 'danger')
+        return redirect(url_for('notificacoes'))
+    db.session.delete(c)
+    db.session.commit()
+    flash('Pedido recusado.', 'info')
+    return redirect(url_for('notificacoes'))
+
+#cancelar pedido
 @app.route('/contatos/<int:contato_id>/cancelar_pedido', methods=['POST'])
 @login_required
 def cancelar_pedido_contato(contato_id):
@@ -935,14 +974,15 @@ def recusar_tarefa(tarefa_id):
 @app.route('/tarefas/<int:tarefa_id>/cancelar_envio', methods=['POST'])
 @login_required
 def cancelar_envio_tarefa(tarefa_id):
+    destino = proximo_seguro() or url_for('contatos')
     t = db.get_or_404(Tarefa, tarefa_id)
     if t.criador_id != current_user.id or t.equipe_id or t.aceite == 'aceita':
         flash('Só dá para cancelar envios que ainda não foram aceitos.', 'danger')
-        return redirect(url_for('contatos'))
+        return redirect(destino)
     db.session.delete(t)
     db.session.commit()
     flash('Envio cancelado.', 'info')
-    return redirect(url_for('contatos'))
+    return redirect(destino)
 
 #notificacoes
 @app.route('/notificacoes')
@@ -1066,15 +1106,86 @@ def descompartilhar_categoria(categoria_id, usuario_id):
 @login_required
 def ver_categoria_compartilhada(categoria_id):
     categoria = db.get_or_404(Categoria, categoria_id)
-    acesso = CategoriaCompartilhada.query.filter_by(categoria_id=categoria.id, usuario_id=current_user.id).first()
-    if not acesso:
+    if not categoria_acessivel(categoria):
         flash('Você não tem acesso a essa categoria.', 'danger')
         return redirect(url_for('ver_categorias'))
-    tarefas = Tarefa.query.filter_by(
-        categoria_id=categoria.id, criador_id=categoria.usuario_id,
-        responsavel_id=categoria.usuario_id, equipe_id=None
-    ).all()
-    return render_template('categoria_compartilhada.html', categoria=categoria, tarefas=tarefas)
+
+    tarefas = Tarefa.query.filter(
+        Tarefa.categoria_id == categoria.id,
+        Tarefa.equipe_id.is_(None)
+    ).order_by(Tarefa.id.desc()).all()
+    # tarefas recusadas só aparecem para quem as enviou
+    tarefas = [t for t in tarefas if t.aceite != 'recusada' or t.criador_id == current_user.id]
+
+    membros = membros_da_categoria(categoria)
+    atribuiveis = [u for u in membros if u.id == current_user.id or sao_contatos(u.id)]
+
+    return render_template('categoria_compartilhada.html',
+                           categoria=categoria, tarefas=tarefas, membros=membros,
+                           atribuiveis=atribuiveis,
+                           eh_dono_categoria=categoria.usuario_id == current_user.id,
+                           limite_tarefas=LIMITE_TAREFAS_PENDENTES_POR_CONTATO)
+
+@app.route('/categorias/<int:categoria_id>/nova_tarefa', methods=['POST'])
+@login_required
+def nova_tarefa_categoria(categoria_id):
+    categoria = db.get_or_404(Categoria, categoria_id)
+    if not categoria_acessivel(categoria):
+        flash('Você não tem acesso a essa categoria.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    destino = url_for('ver_categoria_compartilhada', categoria_id=categoria.id)
+
+    titulo = request.form.get('titulo', '').strip()
+    descricao = request.form.get('descricao', '').strip()
+    prioridade = request.form.get('prioridade', 'A definir')
+    if not titulo:
+        flash('O título da tarefa é obrigatório.', 'danger')
+        return redirect(destino)
+    if prioridade not in PRIORIDADES_VALIDAS:
+        flash('Prioridade inválida.', 'danger')
+        return redirect(destino)
+    try:
+        prazo = validar_prazo((request.form.get('prazo') or '').replace('T', ' '))
+    except ValueError as e:
+        flash(str(e), 'danger')
+        return redirect(destino)
+
+    responsavel_id = request.form.get('responsavel_id', type=int) or current_user.id
+    permitidos = {u.id for u in membros_da_categoria(categoria)
+                  if u.id == current_user.id or sao_contatos(u.id)}
+    if responsavel_id not in permitidos:
+        flash('Escolha um participante da categoria que seja seu contato.', 'danger')
+        return redirect(destino)
+
+    if responsavel_id == current_user.id:
+        aceite = 'aceita'
+    else:
+        pendentes = Tarefa.query.filter_by(
+            criador_id=current_user.id, responsavel_id=responsavel_id,
+            equipe_id=None, aceite='aguardando'
+        ).count()
+        if pendentes >= LIMITE_TAREFAS_PENDENTES_POR_CONTATO:
+            flash(f'Você já tem {LIMITE_TAREFAS_PENDENTES_POR_CONTATO} tarefas aguardando resposta dessa pessoa.', 'danger')
+            return redirect(destino)
+        aceite = 'aguardando'   # <- troque por 'aceita' se quiser que não precise de aceite aqui
+
+    db.session.add(Tarefa(titulo=titulo, descricao=descricao, status='Pendente', prioridade=prioridade,  # type: ignore
+                          prazo=prazo, criador_id=current_user.id, responsavel_id=responsavel_id,
+                          categoria_id=categoria.id, aceite=aceite))
+    db.session.commit()
+    flash('Tarefa criada.' if aceite == 'aceita' else 'Tarefa enviada. Ela só entra no quadro da pessoa depois que ela aceitar.', 'success')
+    return redirect(destino)
+
+@app.route('/categorias/<int:categoria_id>/sair', methods=['POST'])
+@login_required
+def sair_categoria_compartilhada(categoria_id):
+    cs = CategoriaCompartilhada.query.filter_by(
+        categoria_id=categoria_id, usuario_id=current_user.id
+    ).first_or_404()
+    db.session.delete(cs)
+    db.session.commit()
+    flash('Você saiu da categoria.', 'success')
+    return redirect(url_for('ver_categorias'))
 
 
 @app.route('/logout')

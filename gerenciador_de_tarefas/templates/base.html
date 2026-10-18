@@ -111,6 +111,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
           <span>Categorias</span>
         </a>
+        <a class="menu-item {{ 'ativo' if ep == 'contatos' }}" href="{{ url_for('contatos') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 20v-1.5a3.5 3.5 0 00-3.5-3.5h-4A3.5 3.5 0 004 18.5V20M9.5 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM19 8v6M16 11h6"/></svg>
+          <span>Contatos</span>
+        </a>
+        <a class="menu-item {{ 'ativo' if ep == 'notificacoes' }}" href="{{ url_for('notificacoes') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 003.4 0"/></svg>
+          <span>Notificações</span>
+          {% if n_notificacoes %}<span class="badge rounded-pill text-bg-danger ms-auto">{{ n_notificacoes }}</span>{% endif %}
+        </a>
         <a class="menu-item" href="#" data-bs-toggle="modal" data-bs-target="#modalAdicionarTarefa">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
           <span>Adicionar Tarefa</span>
@@ -220,6 +229,7 @@
       })();
     </script>
     
+    {% if current_user.is_authenticated %}
     <!-- Modal / Pop-up de Perfil -->
     <div class="modal fade" id="modalPerfil" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -317,7 +327,7 @@
                                 <select id="modalCategoriaTarefa" name="categoria_id" class="form-select bg-dark text-light border-secondary">
                                     <option value="">Sem categoria</option>
                                     {% for c in categorias_globais %}
-                                    <option value="{{ c.id }}">{{ c.nome }}</option>
+                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.dono.nomeUsuario }}){% endif %}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -388,7 +398,7 @@
                                 <select id="editCategoria" name="categoria_id" class="form-select bg-dark text-light border-secondary">
                                     <option value="">Sem categoria</option>
                                     {% for c in categorias_globais %}
-                                    <option value="{{ c.id }}">{{ c.nome }}</option>
+                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.dono.nomeUsuario }}){% endif %}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -461,6 +471,8 @@
             </div>
         </div>
     </div>
+
+    {% endif %}
 
     <!-- Scripts do Flatpickr -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Notificações - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+{% macro avatar(u) -%}
+    {% if u.foto_perfil and u.foto_perfil != 'default.png' %}
+        <img src="{{ url_for('static', filename='uploads/' + u.foto_perfil) }}" alt="" class="usuario-foto" />
+    {% else %}
+        <span class="usuario-foto">{{ u.nomeUsuario[:1]|upper }}</span>
+    {% endif %}
+{%- endmacro %}
+
+<div class="eq-topo">
+    <div>
+        <h1 class="titulo-pagina">Notificações</h1>
+        <p class="eq-subtitulo">Pedidos de contato, convites de equipe e tarefas enviadas para você.</p>
+    </div>
+    <a href="{{ url_for('contatos') }}" class="btn btn-outline-secondary">Contatos</a>
+</div>
+
+{% if not pedidos and not convites and not tarefas %}
+<div class="eq-vazio">
+    <h3 class="eq-vazio-titulo">Tudo em dia</h3>
+    <p>Você não tem nada pendente.</p>
+</div>
+{% endif %}
+
+{# ---------- Pedidos de contato ---------- #}
+{% if pedidos %}
+<section class="eq-secao">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Pedidos de contato</h2>
+        <span class="eq-contagem">{{ pedidos|length }}</span>
+    </div>
+    <div class="cartao">
+        {% for p in pedidos %}
+        <div class="eqp-membro">
+            {{ avatar(p.solicitante) }}
+            <div style="flex: 1; min-width: 0;">
+                <div class="eqp-membro-nome">{{ p.solicitante.nome or p.solicitante.nomeUsuario }}</div>
+                <small class="text-secondary">@{{ p.solicitante.nomeUsuario }} quer ser seu contato</small>
+            </div>
+            <form method="POST" action="{{ url_for('aceitar_contato', contato_id=p.id) }}">
+                <button type="submit" class="btn btn-principal btn-sm">Aceitar</button>
+            </form>
+            <form method="POST" action="{{ url_for('recusar_contato', contato_id=p.id) }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ---------- Convites de equipe ---------- #}
+{% if convites %}
+<section class="eq-secao">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Convites de equipe</h2>
+        <span class="eq-contagem">{{ convites|length }}</span>
+    </div>
+    <div class="cartao">
+        {% for c in convites %}
+        <div class="eqp-membro">
+            {{ avatar(c.convidante) }}
+            <div style="flex: 1; min-width: 0;">
+                <div class="eqp-membro-nome">Equipe {{ c.equipe.nome }}</div>
+                <small class="text-secondary">{{ c.convidante.nomeUsuario }} convidou você</small>
+            </div>
+            <form method="POST" action="{{ url_for('aceitar_convite', convite_id=c.id) }}">
+                <button type="submit" class="btn btn-principal btn-sm">Entrar</button>
+            </form>
+            <form method="POST" action="{{ url_for('recusar_convite', convite_id=c.id) }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{# ---------- Tarefas recebidas ---------- #}
+{% if tarefas %}
+<section class="eq-secao mb-5">
+    <div class="eq-secao-cab">
+        <h2 class="eq-secao-titulo">Tarefas enviadas para você</h2>
+        <span class="eq-contagem">{{ tarefas|length }}</span>
+    </div>
+    <div class="cartao">
+        {% for t in tarefas %}
+        <div class="py-3 {{ 'border-top' if not loop.first }}">
+            <div class="eqp-membro" style="padding: 0;">
+                {{ avatar(t.criador) }}
+                <div style="flex: 1; min-width: 0;">
+                    <div class="eqp-membro-nome">{{ t.titulo }}</div>
+                    <small class="text-secondary">
+                        de {{ t.criador.nomeUsuario }} · Prioridade: {{ t.prioridade or 'A definir' }}
+                        {% if t.prazo %} · Prazo: {{ t.prazo.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+                        {% if t.categoria %} · Categoria: {{ t.categoria.nome }}{% endif %}
+                    </small>
+                </div>
+                <form method="POST" action="{{ url_for('aceitar_tarefa', tarefa_id=t.id) }}">
+                    <button type="submit" class="btn btn-principal btn-sm">Aceitar</button>
+                </form>
+                <form method="POST" action="{{ url_for('recusar_tarefa', tarefa_id=t.id) }}">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
+                </form>
+            </div>
+            {% if t.descricao %}
+            <p class="eqp-ajuda mt-2 mb-0">{{ t.descricao }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

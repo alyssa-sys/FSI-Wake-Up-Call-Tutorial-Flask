@@ -132,6 +132,34 @@
             <button type="submit" class="btn btn-outline-secondary btn-sm eqp-contorno">{{ ico('refresh', 15) }} Gerar novo código</button>
         </form>
     </div>
+        <div class="cartao">
+        <h2 class="eqp-card-titulo">{{ ico('plus', 22) }} Convidar contato</h2>
+        {% if convidaveis %}
+        <form method="POST" action="{{ url_for('convidar_contato', equipe_id=equipe.id) }}" class="d-flex gap-2">
+            <select name="usuario_id" class="form-select" required>
+                <option value="" disabled selected>Escolha um contato</option>
+                {% for u in convidaveis %}
+                <option value="{{ u.id }}">{{ u.nomeUsuario }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-principal">Convidar</button>
+        </form>
+        {% else %}
+        <p class="eqp-ajuda">Nenhum contato disponível para convidar. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
+        {% endif %}
+
+        {% if equipe.convites %}
+        <p class="eqp-ajuda mt-3 mb-1">Convites pendentes</p>
+        {% for c in equipe.convites %}
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+            <span>{{ c.convidado.nomeUsuario }}</span>
+            <form method="POST" action="{{ url_for('cancelar_convite', convite_id=c.id) }}">
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancelar</button>
+            </form>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
     {% endif %}
 
 </section>
