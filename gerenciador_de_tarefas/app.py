@@ -405,15 +405,12 @@ def quadro():
     # Lógica de Ordenação persistida
     ordem = current_user.ordenacao_quadro
     if ordem == 'prioridade_desc':
-        # Alta (1), Média (2), Baixa (3), A definir (4)
         peso_prio = {'Alta': 1, 'Média': 2, 'Baixa': 3, 'A definir': 4}
         tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
     elif ordem == 'prioridade_asc':
-        # Baixa (1), Média (2), Alta (3), A definir (4)
         peso_prio = {'Baixa': 1, 'Média': 2, 'Alta': 3, 'A definir': 4}
         tarefas.sort(key=lambda t: peso_prio.get(t.prioridade, 5))
     elif ordem == 'prazo':
-        # Tarefas com prazo primeiro (mais próximas), sem prazo por último
         tarefas.sort(key=lambda t: (t.prazo is None, t.prazo))
     elif ordem == 'titulo':
         tarefas.sort(key=lambda t: t.titulo.lower())
