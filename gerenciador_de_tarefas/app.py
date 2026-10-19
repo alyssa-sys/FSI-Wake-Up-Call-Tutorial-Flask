@@ -25,8 +25,11 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chaveMuitoMuitoSecreta'
 # Na Vercel: DATABASE_URL = string de conexão do Neon (Postgres).
 # Sem DATABASE_URL (rodando no seu PC) continua usando o SQLite de sempre.
 _db_url = os.environ.get('DATABASE_URL', '').strip()
-if _db_url.startswith('postgres://'):
-    _db_url = 'postgresql://' + _db_url[len('postgres://'):]
+# Força o driver psycopg2 (o SQLAlchemy novo usaria o 'psycopg', que não está instalado)
+for _prefixo in ('postgres://', 'postgresql://'):
+    if _db_url.startswith(_prefixo):
+        _db_url = 'postgresql+psycopg2://' + _db_url[len(_prefixo):]
+        break
 app.config['SQLALCHEMY_DATABASE_URI'] = _db_url or 'sqlite:///gerenciador_de_tarefas.db'
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
