@@ -412,6 +412,10 @@ textarea.form-control { border-radius: var(--raio-peq); }
 /* ===== Quadro: resumo ===== */
 .resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
 .resumo .cartao h2 { margin: 0 0 16px; font-size: 1rem; font-weight: 600; }
+/* Os três cards têm a mesma altura; o conteúdo de "Visão geral" e "Tarefas por status"
+   (números, anel, gráfico e legenda) fica centralizado na área abaixo do título. */
+.resumo .cartao { display: flex; flex-direction: column; }
+.resumo .linha-resumo, .resumo .grafico-linha { flex: 1; }
 .num-grande { font-size: 2.5rem; font-weight: 700; line-height: 1; }
 .num-rotulo { color: var(--cor-suave); margin-top: 4px; font-size: .9rem; }
 .linha-resumo { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
@@ -460,19 +464,26 @@ textarea.form-control { border-radius: var(--raio-peq); }
 .cat-resumo-item:hover, .cat-resumo-item:focus-visible { color: var(--cor-texto); border-color: var(--cor-suave); }
 
 /* ===== Quadro: filtros ===== */
-.filtros { padding: 12px 16px; margin-bottom: 20px; border-radius: var(--raio); }
-.filtros-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
-.filtros-titulo { display: flex; align-items: center; gap: 8px; height: 38px; color: var(--cor-suave); font-weight: 500; margin-right: 4px; }
-.filtro-campo { display: flex; flex-direction: column; gap: 4px; font-size: .75rem; font-weight: 500; color: var(--cor-suave); }
+.filtros { padding: 18px 24px; margin-bottom: 20px; border-radius: var(--raio); }
+.filtros-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 18px; }
+.filtros-titulo { display: flex; align-items: center; gap: 8px; height: 42px; color: var(--cor-suave); font-weight: 500; margin-right: 8px; }
+.filtro-campo { display: flex; flex-direction: column; gap: 6px; font-size: .75rem; font-weight: 500; color: var(--cor-suave); }
 .filtro-campo .form-control, .filtro-campo .form-select {
-    min-width: 150px; height: 38px; padding: 0 .85rem; font-size: .85rem;
+    min-width: 150px; height: 42px; padding: 0 .95rem; font-size: .85rem;
     background-color: var(--cor-superficie-2); border-color: transparent; border-radius: 50rem;
 }
 .filtro-campo .form-select { padding-right: 2.2rem; }
 .filtro-campo .form-control:focus, .filtro-campo .form-select:focus { border-color: var(--cor-primaria); }
 .filtro-busca .form-control { min-width: 220px; }
-.filtros-botoes { display: flex; gap: 8px; margin-left: auto; }
-.filtros-botoes .btn { height: 38px; padding: 0 18px; font-size: .85rem; display: inline-flex; align-items: center; border-radius: 50rem; }
+/* Os botões ocupam o espaço que sobra à direita dos campos e ficam centralizados nele,
+   no meio da altura da barra (align-self: center). */
+.filtros-botoes { display: flex; justify-content: center; gap: 10px; flex: 1 1 9rem; align-self: center; }
+.filtros-botoes .btn { height: 48px; min-width: 7.5rem; padding: 0 32px; font-size: 1rem; justify-content: center; display: inline-flex; align-items: center; border-radius: 50rem; }
+/* Com filtro ativo (Aplicar + Limpar): continuam na mesma posição à direita, centralizados
+   nesse espaço, mas empilhados (Aplicar em cima) e menores, para caber na altura dos campos
+   (rótulo 18px + espaço 6px + campo 42px = 66px) sem aumentar a barra. */
+.filtros-botoes-duplo { flex-direction: column; align-items: center; gap: 6px; }
+.filtros-botoes-duplo .btn { width: 7.5rem; min-width: 0; height: 30px; padding: 0; font-size: .85rem; line-height: 1; }
 
 /* ===== Quadro: colunas e cartões de tarefa ===== */
 .coluna {
@@ -509,6 +520,8 @@ textarea.form-control { border-radius: var(--raio-peq); }
 .cartao-tarefa .acoes { margin-top: .8rem; padding-top: .8rem; border-top: 1px solid var(--cor-borda); display: flex; flex-direction: column; gap: .5rem; }
 .cartao-tarefa .acoes .form-select { padding: .3rem 2rem .3rem .7rem; font-size: .8rem; border-radius: 50rem; background-color: var(--cor-superficie-2); border-color: transparent; }
 .cartao-tarefa .acoes .btn { padding: .3rem .9rem; font-size: .8rem; border-radius: 50rem; }
+/* Excluir tarefa: contorno cinza (.eqp-contorno) + mini lixeira vermelha ao lado do texto */
+.cartao-tarefa .acoes .btn-excluir-tarefa { display: inline-flex; align-items: center; gap: .4rem; }
 
 /* ===== Quadro Admin / tabelas ===== */
 .tarefa-atrasada td:first-child { border-left: 3px solid var(--status-cancelada); }
@@ -854,8 +867,17 @@ textarea.form-control { border-radius: 14px; }
 .eqp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; margin-top: .35rem; color: var(--cor-suave); font-size: .9rem; }
 .eqp-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .eqp-acoes form { margin: 0; }
-.eqp-acoes .btn { display: inline-flex; align-items: center; gap: .55rem; }
+/* Voltar, Atribuir tarefa, Excluir/Sair: mesma altura, padding, fonte e cantos */
+.eqp-acoes .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+    height: 44px; padding: 0 1.25rem; font-size: .95rem; font-weight: 600;
+    line-height: 1; white-space: nowrap; border-radius: 12px;
+}
 .eqp-acoes .btn-outline-secondary { background: transparent; border: 1px solid var(--cor-borda); }
+/* Só o ícone muda de cor: + do Atribuir tarefa na cor primária (azul) e lixeira do Excluir em vermelho. */
+.eqp-ico-azul, .eqp-ico-perigo { display: inline-flex; }
+.eqp-ico-azul { color: var(--cor-primaria); }
+.eqp-ico-perigo { color: var(--status-cancelada); }
 .eqp-acoes .btn-outline-secondary:hover { background: var(--cor-superficie-2); border-color: var(--cor-borda); }
 
 /* resumo */
@@ -952,6 +974,11 @@ textarea.form-control { border-radius: 14px; }
 .eqp-codigo .codigo-acesso { padding: 0; border-radius: 0; background: none; font-size: 1.5rem; font-weight: 600; letter-spacing: .08em; }
 .eqp-resumo .btn-sm { display: inline-flex; align-items: center; gap: .5rem; }
 .eqp-contorno { background: transparent; border: 1px solid var(--cor-borda); }
+/* Gerar novo código: maior que um .btn-sm */
+.eqp-btn-codigo {
+    display: inline-flex; align-items: center; gap: .5rem;
+    height: 42px; padding: 0 1.25rem; font-size: .9rem; border-radius: 12px;
+}
 .eqp-contorno:hover { background: var(--cor-superficie-2); border-color: var(--cor-borda); }
 
 /* colunas do quadro da equipe */
@@ -1178,3 +1205,59 @@ textarea.form-control { border-radius: 14px; }
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
+
+/* ===== Contatos: lista "Meus contatos" (contatos.html) ===== */
+.contato-item { padding: 1.4rem 0; }
+.contato-item:first-child { padding-top: .5rem; }
+.contato-item:last-child { padding-bottom: .5rem; }
+.contato-linha { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 18px; }
+.contato-linha .usuario-foto { width: 60px; height: 60px; font-size: 1.5rem; flex: none; }
+.contato-info { flex: 1 1 180px; min-width: 0; }
+.contato-nome { font-size: 1.2rem; font-weight: 600; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contato-usuario { margin-top: 2px; font-size: 1rem; color: var(--cor-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contato-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-left: auto; }
+.contato-acoes form { margin: 0; }
+/* Enviar tarefa e Remover: mesma altura, largura mínima, fonte e cantos */
+.contato-acoes .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 44px; min-width: 8.5rem; padding: 0 1.4rem;
+    font-size: .95rem; font-weight: 600; line-height: 1; white-space: nowrap; border-radius: 12px;
+}
+/* Remover contato: contorno cinza + lixeira vermelha ao lado do texto */
+.contato-acoes .btn-remover-contato { gap: .55rem; }
+
+/* ===== Categoria (categoria.html) ===== */
+/* Editar e Tirar da categoria: mesma altura, padding, fonte e cantos */
+.cat-tarefa-acoes .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 38px; padding: 0 1.1rem; font-size: .85rem; font-weight: 600;
+    line-height: 1; white-space: nowrap; border-radius: 10px;
+}
+/* "(em Categoria)" mais afastado do título da tarefa */
+.cat-linha-em { margin-left: .85rem; }
+/* Remover acesso no lado direito do card, e não colado no nome */
+.cat-comp-lista .eqp-membro form { margin-left: auto; flex: none; }
+
+/* ===== Popups de tarefa (Nova, Editar e Atribuir): maiores e com o botão do checklist em destaque ===== */
+.modal-dialog.modal-tarefa { max-width: 640px; }
+.modal-tarefa .modal-header, .modal-tarefa .modal-footer { padding: 1.15rem 1.75rem; }
+.modal-tarefa .modal-body { padding-left: 1.75rem; padding-right: 1.75rem; }
+.checklist-bloco { margin-top: 1.6rem; margin-bottom: 1.75rem; }
+.checklist-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; height: 52px; padding: 0 1.15rem; text-align: left;
+    font-size: 1rem; font-weight: 600; border-radius: 12px;
+}
+.checklist-toggle small { font-size: .85rem; font-weight: 500; }
+
+/* ===== Cartão de tarefa da equipe: prioridade + prazo numa linha, responsável sempre embaixo ===== */
+.chips.chips-equipe { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 10px; }
+.chips-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.chips-equipe .chip-pessoa { max-width: 100%; padding: 5px 13px 5px 6px; gap: 8px; font-size: .85rem; }
+.chips-equipe .chip-pessoa .mini { width: 22px; height: 22px; font-size: .72rem; }
+/* Pedidos enviados: nome com a etiqueta "Aguardando" ao lado, botão Cancelar à direita */
+.contato-nome-linha { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.contato-nome-linha .contato-nome { flex: 0 1 auto; min-width: 0; }
+.contato-nome-linha .eq-tag { flex: none; font-size: .8rem; padding: .25rem .7rem; }
+/* Notificações: texto de apoio longo (tarefas recebidas) pode quebrar linha */
+.contato-usuario.contato-usuario-livre { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; }

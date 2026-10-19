@@ -34,18 +34,22 @@
     </div>
     <div class="cartao">
         {% for p in pedidos %}
-        <div class="eqp-membro">
-            {{ avatar(p.solicitante) }}
-            <div style="flex: 1; min-width: 0;">
-                <div class="eqp-membro-nome">{{ p.solicitante.nome or p.solicitante.nomeUsuario }}</div>
-                <small class="text-secondary">@{{ p.solicitante.nomeUsuario }} quer ser seu contato</small>
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
+                {{ avatar(p.solicitante) }}
+                <div class="contato-info">
+                    <div class="contato-nome">{{ p.solicitante.nome or p.solicitante.nomeUsuario }}</div>
+                    <div class="contato-usuario">@{{ p.solicitante.nomeUsuario }} quer ser seu contato</div>
+                </div>
+                <div class="contato-acoes">
+                    <form method="POST" action="{{ url_for('aceitar_contato', contato_id=p.id) }}">
+                        <button type="submit" class="btn btn-principal">Aceitar</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('recusar_contato', contato_id=p.id) }}">
+                        <button type="submit" class="btn btn-outline-secondary">Recusar</button>
+                    </form>
+                </div>
             </div>
-            <form method="POST" action="{{ url_for('aceitar_contato', contato_id=p.id) }}">
-                <button type="submit" class="btn btn-principal btn-sm">Aceitar</button>
-            </form>
-            <form method="POST" action="{{ url_for('recusar_contato', contato_id=p.id) }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
-            </form>
         </div>
         {% endfor %}
     </div>
@@ -61,18 +65,22 @@
     </div>
     <div class="cartao">
         {% for c in convites %}
-        <div class="eqp-membro">
-            {{ avatar(c.convidante) }}
-            <div style="flex: 1; min-width: 0;">
-                <div class="eqp-membro-nome">Equipe {{ c.equipe.nome }}</div>
-                <small class="text-secondary">{{ c.convidante.nomeUsuario }} convidou você</small>
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
+                {{ avatar(c.convidante) }}
+                <div class="contato-info">
+                    <div class="contato-nome">Equipe {{ c.equipe.nome }}</div>
+                    <div class="contato-usuario">{{ c.convidante.nomeUsuario }} convidou você</div>
+                </div>
+                <div class="contato-acoes">
+                    <form method="POST" action="{{ url_for('aceitar_convite', convite_id=c.id) }}">
+                        <button type="submit" class="btn btn-principal">Entrar</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('recusar_convite', convite_id=c.id) }}">
+                        <button type="submit" class="btn btn-outline-secondary">Recusar</button>
+                    </form>
+                </div>
             </div>
-            <form method="POST" action="{{ url_for('aceitar_convite', convite_id=c.id) }}">
-                <button type="submit" class="btn btn-principal btn-sm">Entrar</button>
-            </form>
-            <form method="POST" action="{{ url_for('recusar_convite', convite_id=c.id) }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
-            </form>
         </div>
         {% endfor %}
     </div>
@@ -88,26 +96,28 @@
     </div>
     <div class="cartao">
         {% for t in tarefas %}
-        <div class="py-3 {{ 'border-top' if not loop.first }}">
-            <div class="eqp-membro" style="padding: 0;">
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
                 {{ avatar(t.criador) }}
-                <div style="flex: 1; min-width: 0;">
-                    <div class="eqp-membro-nome">{{ t.titulo }}</div>
-                    <small class="text-secondary">
+                <div class="contato-info">
+                    <div class="contato-nome">{{ t.titulo }}</div>
+                    <div class="contato-usuario contato-usuario-livre">
                         de {{ t.criador.nomeUsuario }} · Prioridade: {{ t.prioridade or 'A definir' }}
                         {% if t.prazo %} · Prazo: {{ t.prazo.strftime('%d/%m/%Y %H:%M') }}{% endif %}
                         {% if t.categoria %} · Categoria: {{ t.categoria.nome }}{% endif %}
-                    </small>
+                    </div>
                 </div>
-                <form method="POST" action="{{ url_for('aceitar_tarefa', tarefa_id=t.id) }}">
-                    <button type="submit" class="btn btn-principal btn-sm">Aceitar</button>
-                </form>
-                <form method="POST" action="{{ url_for('recusar_tarefa', tarefa_id=t.id) }}">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm">Recusar</button>
-                </form>
+                <div class="contato-acoes">
+                    <form method="POST" action="{{ url_for('aceitar_tarefa', tarefa_id=t.id) }}">
+                        <button type="submit" class="btn btn-principal">Aceitar</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('recusar_tarefa', tarefa_id=t.id) }}">
+                        <button type="submit" class="btn btn-outline-secondary">Recusar</button>
+                    </form>
+                </div>
             </div>
             {% if t.descricao %}
-            <p class="eqp-ajuda mt-2 mb-0">{{ t.descricao }}</p>
+            <p class="eqp-ajuda mt-3 mb-0">{{ t.descricao }}</p>
             {% endif %}
         </div>
         {% endfor %}

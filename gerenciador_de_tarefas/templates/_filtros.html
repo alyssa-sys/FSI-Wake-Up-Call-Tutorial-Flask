@@ -86,11 +86,11 @@
             </select>
         </label>
 
-        <div class="filtros-botoes">
+        <div class="filtros-botoes {{ 'filtros-botoes-duplo' if filtrando }}">
+            <button type="submit" class="btn btn-principal">Aplicar</button>
             {% if filtrando %}
             <a href="{{ request.path }}" class="btn btn-outline-secondary">Limpar</a>
             {% endif %}
-            <button type="submit" class="btn btn-principal">Aplicar</button>
         </div>
     </div>
 </form>

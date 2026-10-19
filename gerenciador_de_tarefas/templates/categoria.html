@@ -69,7 +69,22 @@
             {% endif %}
         </div>
         <div class="cat-tarefa-acoes">
-            <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
+            {% set subs_json = [] %}
+            {% for sub in tarefa.subtarefas %}
+                {% set _ = subs_json.append({'id': sub.id, 'titulo': sub.titulo, 'concluida': sub.concluida}) %}
+            {% endfor %}
+            {# A rota editar_tarefa só aceita POST: o botão abre o popup de edição, igual ao quadro e à equipe. #}
+            <button type="button" class="btn btn-principal btn-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalEditarTarefa"
+                    data-action="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}"
+                    data-titulo="{{ tarefa.titulo }}"
+                    data-descricao="{{ tarefa.descricao or '' }}"
+                    data-status="{{ tarefa.status }}"
+                    data-prioridade="{{ tarefa.prioridade or 'A definir' }}"
+                    data-categoria="{{ tarefa.categoria_id or '' }}"
+                    data-prazo="{{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') if tarefa.prazo else '' }}"
+                    data-subtarefas='{{ subs_json | tojson | safe }}'>Editar</button>
             <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
                 <input type="hidden" name="categoria_id" value="">
                 <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
@@ -175,5 +190,51 @@
     </div>
     {% endif %}
 </section>
+
+<script>
+  // Popup "Editar Tarefa" (está no base.html): preenche os campos com os dados da tarefa clicada.
+  document.addEventListener("DOMContentLoaded", function () {
+      const inputEditPrazo = document.getElementById("editPrazo");
+      let fpEdit = null;
+      if (inputEditPrazo) {
+          fpEdit = flatpickr(inputEditPrazo, {
+              enableTime: true, dateFormat: "d/m/Y H:i", time_24hr: true, locale: "pt", allowInput: true
+          });
+      }
+
+      const modalEditar = document.getElementById("modalEditarTarefa");
+      if (!modalEditar) return;
+      modalEditar.addEventListener("show.bs.modal", function (event) {
+          const button = event.relatedTarget;
+          if (!button) return;
+
+          document.getElementById("formEditarTarefa").action = button.dataset.action || "";
+          document.getElementById("editTitulo").value = button.dataset.titulo || "";
+          document.getElementById("editDescricao").value = button.dataset.descricao || "";
+          document.getElementById("editStatus").value = button.dataset.status || "Pendente";
+          document.getElementById("editPrioridade").value = button.dataset.prioridade || "A definir";
+
+          const editCat = document.getElementById("editCategoria");
+          if (editCat) editCat.value = button.dataset.categoria || "";
+
+          if (fpEdit) {
+              if (button.dataset.prazo) fpEdit.setDate(button.dataset.prazo, true, "d/m/Y H:i");
+              else fpEdit.clear();
+          }
+
+          const containerSubEdit = document.getElementById("container-subtarefas-editar");
+          if (containerSubEdit) {
+              containerSubEdit.innerHTML = "";
+              try {
+                  JSON.parse(button.dataset.subtarefas || "[]").forEach(function (sub) {
+                      adicionarCampoSubtarefaEditar(sub.titulo, sub.id, sub.concluida);
+                  });
+              } catch (e) {
+                  console.error("Erro ao carregar subtarefas para edição", e);
+              }
+          }
+      });
+  });
+</script>
 
 {% endblock %}

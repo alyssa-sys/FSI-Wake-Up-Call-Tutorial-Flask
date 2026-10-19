@@ -79,7 +79,7 @@
             <a href="{{ url_for('ver_categorias') }}" class="link-suave">Ver pastas</a>
         </div>
         <div class="cat-resumo-lista">
-        {% for c in categorias[:4] %}
+        {% for c in categorias[:2] %}
             {% set qt = c.tarefas|length %}
             {% set ok = c.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
             <a class="cat-resumo-item" href="{{ url_for('ver_categoria', categoria_id=c.id) }}">
@@ -195,7 +195,10 @@
                         </button>
                         <form action="{{ url_for('excluir_tarefa', tarefa_id=tarefa.id) }}" method="POST"
                               onsubmit="return confirm('Tem certeza que deseja excluir esta tarefa?');">
-                            <button type="submit" class="btn btn-outline-danger">Excluir</button>
+                            <button type="submit" class="btn btn-outline-secondary eqp-contorno btn-excluir-tarefa">
+                                <span class="eqp-ico-perigo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></span>
+                                Excluir
+                            </button>
                         </form>
                     </div>
                 </div>

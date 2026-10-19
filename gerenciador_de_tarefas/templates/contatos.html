@@ -42,19 +42,24 @@
     {% if contatos %}
     <div class="cartao">
         {% for u in contatos %}
-        <div class="py-3 {{ 'border-top' if not loop.first }}">
-            <div class="eqp-membro" style="padding: 0;">
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
                 {{ avatar(u) }}
-                <div style="flex: 1; min-width: 0;">
-                    <div class="eqp-membro-nome">{{ u.nome or u.nomeUsuario }}</div>
-                    <small class="text-secondary">@{{ u.nomeUsuario }}</small>
+                <div class="contato-info">
+                    <div class="contato-nome">{{ u.nome or u.nomeUsuario }}</div>
+                    <div class="contato-usuario">@{{ u.nomeUsuario }}</div>
                 </div>
-                <button type="button" class="btn btn-principal btn-sm"
-                        data-bs-toggle="collapse" data-bs-target="#enviar-{{ u.id }}">Enviar tarefa</button>
-                <form method="POST" action="{{ url_for('remover_contato', usuario_id=u.id) }}"
-                      onsubmit="return confirm('Remover este contato? Tarefas e convites ainda pendentes entre vocês serão apagados e as categorias compartilhadas deixam de ser compartilhadas.');">
-                    <button type="submit" class="btn btn-outline-danger btn-sm">Remover</button>
-                </form>
+                <div class="contato-acoes">
+                    <button type="button" class="btn btn-principal"
+                            data-bs-toggle="collapse" data-bs-target="#enviar-{{ u.id }}">Enviar tarefa</button>
+                    <form method="POST" action="{{ url_for('remover_contato', usuario_id=u.id) }}"
+                          onsubmit="return confirm('Remover este contato? Tarefas e convites ainda pendentes entre vocês serão apagados e as categorias compartilhadas deixam de ser compartilhadas.');">
+                        <button type="submit" class="btn btn-outline-secondary eqp-contorno btn-remover-contato">
+                            <span class="eqp-ico-perigo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></span>
+                            Remover
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <div class="collapse" id="enviar-{{ u.id }}">
@@ -105,13 +110,22 @@
     </div>
     <div class="cartao">
         {% for p in pedidos_enviados %}
-        <div class="eqp-membro">
-            {{ avatar(p.destinatario) }}
-            <div class="eqp-membro-nome">{{ p.destinatario.nomeUsuario }}</div>
-            <span class="eq-tag">Aguardando</span>
-            <form method="POST" action="{{ url_for('cancelar_pedido_contato', contato_id=p.id) }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Cancelar</button>
-            </form>
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
+                {{ avatar(p.destinatario) }}
+                <div class="contato-info">
+                    <div class="contato-nome-linha">
+                        <span class="contato-nome">{{ p.destinatario.nome or p.destinatario.nomeUsuario }}</span>
+                        <span class="eq-tag">Aguardando</span>
+                    </div>
+                    <div class="contato-usuario">@{{ p.destinatario.nomeUsuario }}</div>
+                </div>
+                <div class="contato-acoes">
+                    <form method="POST" action="{{ url_for('cancelar_pedido_contato', contato_id=p.id) }}">
+                        <button type="submit" class="btn btn-outline-secondary">Cancelar</button>
+                    </form>
+                </div>
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -127,20 +141,27 @@
     {% if tarefas_enviadas %}
     <div class="cartao">
         {% for t in tarefas_enviadas %}
-        <div class="eqp-membro">
-            {{ avatar(t.responsavel) }}
-            <div style="flex: 1; min-width: 0;">
-                <div class="eqp-membro-nome">{{ t.titulo }}</div>
-                <small class="text-secondary">para {{ t.responsavel.nomeUsuario }}</small>
+        {# Mesmo formato de "Pedidos enviados": foto grande, nome grande com a etiqueta ao lado e botão grande. #}
+        <div class="contato-item {{ 'border-top' if not loop.first }}">
+            <div class="contato-linha">
+                {{ avatar(t.responsavel) }}
+                <div class="contato-info">
+                    <div class="contato-nome-linha">
+                        <span class="contato-nome">{{ t.titulo }}</span>
+                        <span class="eq-tag">{{ rotulo[t.aceite] }}{% if t.aceite == 'aceita' %} · {{ t.status }}{% endif %}</span>
+                    </div>
+                    <div class="contato-usuario contato-usuario-livre">para {{ t.responsavel.nomeUsuario }}</div>
+                </div>
+                {% if t.aceite != 'aceita' %}
+                <div class="contato-acoes">
+                    <form method="POST" action="{{ url_for('cancelar_envio_tarefa', tarefa_id=t.id) }}">
+                        <button type="submit" class="btn btn-outline-secondary">
+                            {{ 'Cancelar envio' if t.aceite == 'aguardando' else 'Remover' }}
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
             </div>
-            <span class="eq-tag">{{ rotulo[t.aceite] }}{% if t.aceite == 'aceita' %} · {{ t.status }}{% endif %}</span>
-            {% if t.aceite != 'aceita' %}
-            <form method="POST" action="{{ url_for('cancelar_envio_tarefa', tarefa_id=t.id) }}">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">
-                    {{ 'Cancelar envio' if t.aceite == 'aguardando' else 'Remover' }}
-                </button>
-            </form>
-            {% endif %}
         </div>
         {% endfor %}
     </div>

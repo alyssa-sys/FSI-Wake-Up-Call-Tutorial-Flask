@@ -127,7 +127,6 @@
                 <span>Criada por {{ equipe.dono.nomeUsuario }}</span>
                 <span aria-hidden="true">•</span>
                 <span>{{ n_membros }} membro{{ '' if n_membros == 1 else 's' }}</span>
-                <span class="eq-tag">{{ 'Criador' if dono else ('Admin' if admin_equipe else 'Membro') }}</span>
             </div>
         </div>
     </div>
@@ -139,19 +138,19 @@
             {% set _ = membros_json.append({'id': m.usuario.id, 'nome': m.usuario.nomeUsuario}) %}
         {% endfor %}
 
-        <button type="button" class="btn btn-principal" 
+        <button type="button" class="btn btn-outline-secondary" 
                 data-bs-toggle="modal" 
                 data-bs-target="#modalAtribuirTarefaEquipe"
                 data-action="{{ url_for('adicionar_tarefa_equipe', equipe_id=equipe.id) }}"
                 data-equipe-nome="{{ equipe.nome }}"
                 data-membros='{{ membros_json | tojson }}'>
-            {{ ico('plus', 16) }} Atribuir tarefa
+            <span class="eqp-ico-azul">{{ ico('plus', 16) }}</span> Atribuir tarefa
         </button>
         {% endif %}
         {% if dono %}
         <form method="POST" action="{{ url_for('excluir_equipe', equipe_id=equipe.id) }}"
               onsubmit="return confirm('Excluir a equipe, todas as tarefas e remover os membros? Isso não pode ser desfeito.');">
-            <button type="submit" class="btn btn-outline-danger">{{ ico('trash', 16) }} Excluir equipe</button>
+            <button type="submit" class="btn btn-outline-secondary"><span class="eqp-ico-perigo">{{ ico('trash', 16) }}</span> Excluir equipe</button>
         </form>
         {% else %}
         <form method="POST" action="{{ url_for('remover_membro', equipe_id=equipe.id, usuario_id=current_user.id) }}"
@@ -212,9 +211,9 @@
         <h2 class="eqp-card-titulo">{{ ico('lock', 22) }} Código de acesso</h2>
         <div class="eqp-codigo"><span class="codigo-acesso">{{ equipe.codigo_acesso }}</span></div>
         <p class="eqp-ajuda">Passe esse código para quem deve entrar na equipe.</p>
-        <form method="POST" action="{{ url_for('novo_codigo_equipe', equipe_id=equipe.id) }}" class="mt-3"
+        <form method="POST" action="{{ url_for('novo_codigo_equipe', equipe_id=equipe.id) }}" class="mt-4"
               onsubmit="return confirm('O código atual deixará de funcionar. Continuar?');">
-            <button type="submit" class="btn btn-outline-secondary btn-sm eqp-contorno">{{ ico('refresh', 15) }} Gerar novo código</button>
+            <button type="submit" class="btn btn-outline-secondary eqp-contorno eqp-btn-codigo">{{ ico('refresh', 16) }} Gerar novo código</button>
         </form>
     </div>
     {# O card some quando todos os seus contatos já estão na equipe (ou convidados) e não há convite pendente. #}
@@ -222,14 +221,14 @@
     <div class="cartao">
         <h2 class="eqp-card-titulo">{{ ico('plus', 22) }} Convidar contato</h2>
         {% if convidaveis %}
-        <form method="POST" action="{{ url_for('convidar_contato', equipe_id=equipe.id) }}" class="d-flex gap-2">
+        <form method="POST" action="{{ url_for('convidar_contato', equipe_id=equipe.id) }}" class="d-flex flex-column gap-3">
             <select name="usuario_id" class="form-select" required>
                 <option value="" disabled selected>Escolha um contato</option>
                 {% for u in convidaveis %}
                 <option value="{{ u.id }}">{{ u.nomeUsuario }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-principal">Convidar</button>
+            <button type="submit" class="btn btn-principal eqp-btn-codigo align-self-start">Convidar</button>
         </form>
         {% elif not total_contatos %}
         <p class="eqp-ajuda">Você ainda não tem contatos. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
@@ -278,11 +277,14 @@
                 {% if tarefa.descricao %}
                 <div class="tarefa-desc">{{ tarefa.descricao|truncate(70) }}</div>
                 {% endif %}
-                <div class="chips">
-                    <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
-                    {% if tarefa.prazo %}
-                    <span class="chip {{ 'chip-atrasada' if atrasada }}">{{ ico('clock', 12) }} {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}</span>
-                    {% endif %}
+                <div class="chips chips-equipe">
+                    {# Linha 1: prioridade e prazo, juntos. Linha 2: responsável, sempre embaixo. #}
+                    <div class="chips-meta">
+                        <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
+                        {% if tarefa.prazo %}
+                        <span class="chip {{ 'chip-atrasada' if atrasada }}">{{ ico('clock', 12) }} {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} · atrasada{% endif %}</span>
+                        {% endif %}
+                    </div>
                     <span class="chip chip-pessoa" title="Responsável: {{ tarefa.responsavel.nomeUsuario }}"><span class="mini">{{ tarefa.responsavel.nomeUsuario[:1]|upper }}</span>{{ tarefa.responsavel.nomeUsuario }}</span>
                 </div>
 
