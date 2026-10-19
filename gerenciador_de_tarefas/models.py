@@ -8,6 +8,7 @@ class Usuario(db.Model, UserMixin):
     nomeUsuario = db.Column(db.String(50), unique=True, nullable=False)
     email = db.Column(db.String(254), unique=True, nullable=False)
     senha = db.Column(db.String(255), nullable=False)
+    email_verificado = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     nome = db.Column(db.String(100), nullable=False)
     tarefasCriadas = db.relationship('Tarefa', backref='criador', foreign_keys='Tarefa.criador_id', lazy=True)
     tarefasAtribuidas = db.relationship('Tarefa', backref='responsavel', foreign_keys='Tarefa.responsavel_id', lazy=True)

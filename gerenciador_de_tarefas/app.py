@@ -1,4 +1,8 @@
 import secrets
+import smtplib
+from email.message import EmailMessage
+from markupsafe import escape
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Contato, ConviteEquipe, CategoriaCompartilhada, Subtarefa
 from sqlalchemy import or_, and_, text, inspect
 from datetime import datetime, timedelta
@@ -43,6 +47,58 @@ login_manager.login_view = 'login' # type: ignore
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(Usuario, int(user_id))
+
+# ---------- Confirmação de e-mail ----------
+# Na Vercel o link do e-mail precisa ser https
+app.config['PREFERRED_URL_SCHEME'] = 'https' if os.environ.get('VERCEL') else 'http'
+_serializador = URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='confirmar-email')
+VALIDADE_TOKEN_SEGUNDOS = 60 * 60 * 24  # o link vale 24 horas
+
+def gerar_token_email(email):
+    return _serializador.dumps(email)
+
+def ler_token_email(token):
+    try:
+        return _serializador.loads(token, max_age=VALIDADE_TOKEN_SEGUNDOS)
+    except (SignatureExpired, BadSignature):
+        return None
+
+def enviar_email_confirmacao(usuario):
+    """Envia o link de confirmação. Devolve True se enviou, False se deu erro."""
+    remetente = os.environ.get('MAIL_USER')
+    senha = os.environ.get('MAIL_SENHA')
+    if not remetente or not senha:
+        app.logger.error('MAIL_USER / MAIL_SENHA não configurados.')
+        return False
+
+    link = url_for('confirmar_email', token=gerar_token_email(usuario.email), _external=True)
+    msg = EmailMessage()
+    msg['Subject'] = 'Confirme seu e-mail - Gerenciador de Tarefas'
+    msg['From'] = remetente
+    msg['To'] = usuario.email
+    msg.set_content(
+        f'Olá, {usuario.nome}!\n\n'
+        f'Para ativar sua conta, abra o link abaixo (vale por 24 horas):\n{link}\n\n'
+        'Se não foi você que criou a conta, ignore este e-mail.'
+    )
+    msg.add_alternative(
+        f'<p>Olá, {escape(usuario.nome)}!</p>'
+        '<p>Para ativar sua conta, clique no botão abaixo (vale por 24 horas):</p>'
+        f'<p><a href="{link}" style="background:#4f46e5;color:#fff;padding:12px 20px;'
+        'border-radius:8px;text-decoration:none;display:inline-block">Confirmar e-mail</a></p>'
+        f'<p style="color:#666;font-size:13px">Ou copie este link: {link}</p>'
+        '<p style="color:#666;font-size:13px">Se não foi você que criou a conta, ignore este e-mail.</p>',
+        subtype='html',
+    )
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(remetente, senha)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        app.logger.error(f'Falha ao enviar e-mail de confirmação: {e}')
+        return False
 
 # Cria função do link para google agenda
 def link_google_calendar(tarefa):
@@ -166,7 +222,9 @@ def garantir_schema():
     """Cria as tabelas e acrescenta colunas novas que faltem (funciona em SQLite e Postgres)."""
     db.create_all()
     binario = 'BLOB' if db.engine.dialect.name == 'sqlite' else 'BYTEA'
+    verdadeiro = '1' if db.engine.dialect.name == 'sqlite' else 'TRUE'   # <- NOVA
     novas = [
+        ('usuario', 'email_verificado', f'BOOLEAN NOT NULL DEFAULT {verdadeiro}'),   # <- NOVA
         ('membro_equipe', 'cargo', "VARCHAR(20) NOT NULL DEFAULT 'membro'"),
         ('usuario', 'foto_dados', binario),
         ('usuario', 'foto_tipo', 'VARCHAR(50)'),
@@ -324,19 +382,57 @@ def registro():
         nome = request.form.get('nome', '').strip() or nomeUsuario
         senha = generate_password_hash(request.form['senha'])
 
-        usuario = Usuario.query.filter((Usuario.email == email) | (Usuario.nomeUsuario == nomeUsuario)).first()
-        if usuario:
+        existentes = Usuario.query.filter((Usuario.email == email) | (Usuario.nomeUsuario == nomeUsuario)).all()
+        if any(u.email_verificado for u in existentes):
             flash('Já existe um usuário com esse email ou nome de usuário.', 'danger')
             return redirect(url_for('registro'))
 
-        novo_usuario = Usuario(nomeUsuario=nomeUsuario, nome=nome, email=email, senha=senha) # type: ignore
+        # Contas que nunca confirmaram o e-mail não conseguem entrar (não têm dados),
+        # então liberamos o e-mail/usuário para um novo cadastro (ex.: digitou o e-mail errado).
+        if existentes:
+            try:
+                for u in existentes:
+                    db.session.delete(u)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                flash('Já existe um usuário com esse email ou nome de usuário.', 'danger')
+                return redirect(url_for('registro'))
+
+        novo_usuario = Usuario(nomeUsuario=nomeUsuario, nome=nome, email=email, senha=senha, email_verificado=False) # type: ignore
         db.session.add(novo_usuario)
         db.session.commit()
 
-        flash('Usuário registrado com sucesso!', 'success')
+        if enviar_email_confirmacao(novo_usuario):
+            flash(f'Conta criada! Enviamos um link de confirmação para {email}. Confirme para poder entrar.', 'success')
+        else:
+            flash('Conta criada, mas não conseguimos enviar o e-mail agora. Tente entrar para pedir um novo link.', 'danger')
         return redirect(url_for('login'))
 
     return render_template('registro.html')
+
+@app.route('/confirmar/<token>')
+def confirmar_email(token):
+    email = ler_token_email(token)
+    usuario = Usuario.query.filter_by(email=email).first() if email else None
+    if not usuario:
+        flash('Link inválido ou expirado. Tente entrar para receber um novo link.', 'danger')
+        return redirect(url_for('login'))
+
+    if not usuario.email_verificado:
+        usuario.email_verificado = True
+        db.session.commit()
+    flash('E-mail confirmado! Agora você já pode entrar.', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/reenviar_confirmacao', methods=['POST'])
+def reenviar_confirmacao():
+    email = request.form.get('email', '').strip().lower()
+    usuario = Usuario.query.filter_by(email=email).first()
+    if usuario and not usuario.email_verificado:
+        enviar_email_confirmacao(usuario)
+    flash('Se houver uma conta aguardando confirmação nesse e-mail, enviamos um novo link.', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -349,6 +445,9 @@ def login():
         ).first()
 
         if usuario and check_password_hash(usuario.senha, senha):
+            if not usuario.email_verificado:
+                flash('Confirme seu e-mail antes de entrar. Veja sua caixa de entrada (e o spam).', 'danger')
+                return render_template('login.html', reenviar_email=usuario.email)
             login_user(usuario)
             flash('Login realizado com sucesso!', 'success')
             return redirect(url_for('admin_dashboard') if usuario.cargo == 'admin' else url_for('quadro'))

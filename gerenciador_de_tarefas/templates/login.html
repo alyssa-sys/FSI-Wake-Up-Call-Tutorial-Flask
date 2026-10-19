@@ -88,6 +88,15 @@ endblock %} {% block content %}
         </button>
       </form>
 
+      {% if reenviar_email %}
+      <form method="POST" action="{{ url_for('reenviar_confirmacao') }}" class="mt-3">
+        <input type="hidden" name="email" value="{{ reenviar_email }}" />
+        <button type="submit" class="btn btn-outline-secondary w-100">
+          Reenviar e-mail de confirmação
+        </button>
+      </form>
+      {% endif %}
+
       <p class="lc-rodape">
         Não tem uma conta?
         <a href="{{ url_for('registro') }}">Registre-se aqui</a>
