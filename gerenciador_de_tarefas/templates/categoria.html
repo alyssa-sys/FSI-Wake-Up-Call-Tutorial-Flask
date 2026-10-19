@@ -2,13 +2,13 @@
 {% block title %}{{ categoria.nome }} - Gerenciador de Tarefas{% endblock %}
 {% block content %}
 
-{# Os estilos desta tela estão no static.css (seção "Categoria"). Reaproveita eqp-, eq- e as peças do quadro. #}
-
 {% macro ico(nome, t=18) -%}
 <svg width="{{ t }}" height="{{ t }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 {%- if nome == 'voltar' %}<path d="M19 12H5M11 6l-6 6 6 6"/>
 {%- elif nome == 'plus' %}<path d="M12 5v14M5 12h14"/>
 {%- elif nome == 'pasta-mais' %}<path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2zM12 10.5v5M9.5 13h5"/>
+{%- elif nome == 'tarefa' %}<path d="M9 11l3 3 8-8M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/>
+{%- elif nome == 'ellipsis' %}<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
 {%- endif %}</svg>
 {%- endmacro %}
 
@@ -22,16 +22,42 @@
 
 {% set status_classe = {'Pendente': 'status-pendente', 'Em andamento': 'status-andamento', 'Concluída': 'status-concluida', 'Cancelada': 'status-cancelada'} %}
 
-{# ---------- Topo ---------- #}
-<div class="eqp-topo">
+{# Caminho de Navegação Hierárquico (Breadcrumbs) #}
+<nav aria-label="Caminho" class="mb-3">
+    <ol class="breadcrumb" style="background: none; padding: 0; font-size: 0.9rem;">
+        <li class="breadcrumb-item"><a href="{{ url_for('ver_categorias') }}" class="link-suave">Categorias</a></li>
+        {% for ancestral in categoria.caminho_ancestrais %}
+            <li class="breadcrumb-item"><a href="{{ url_for('ver_categoria', categoria_id=ancestral.id) }}" class="link-suave">{{ ancestral.nome }}</a></li>
+        {% endfor %}
+        <li class="breadcrumb-item active text-white" aria-current="page">{{ categoria.nome }}</li>
+    </ol>
+</nav>
+
+{# ---------- Topo da Pasta ---------- #}
+<div class="eqp-topo mb-4">
     <div class="eqp-id">
-        <span class="eq-inicial" aria-hidden="true">{{ categoria.nome[:1]|upper }}</span>
+        <span class="eq-inicial fs-3" aria-hidden="true">📁</span>
         <div class="min-w-0">
-            <h1>{{ categoria.nome }}</h1>
-            <div class="eqp-meta">{{ tarefas|length }} tarefa{{ '' if tarefas|length == 1 else 's' }}</div>
+            <h1 class="text-white fw-bold mb-1">{{ categoria.nome }}</h1>
+            <div class="eqp-meta text-secondary small">{{ categoria.total_tarefas }} tarefa{{ '' if categoria.total_tarefas == 1 else 's' }} no total (incluindo subpastas)</div>
+            
+            <!-- Seletor para mover esta pasta -->
+            <form method="POST" action="{{ url_for('mover_categoria', categoria_id=categoria.id) }}" class="mt-2">
+                <div class="d-flex gap-2 align-items-center">
+                    <select name="novo_pai_id" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;">
+                        <option value="">Pasta Raiz (Sem superior)</option>
+                        {% for c in categorias_globais %}
+                            {% if c.id != categoria.id %}
+                            <option value="{{ c.id }}" {% if categoria.parent_id == c.id %}selected{% endif %}>Mover para: {{ c.nome }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Mover Pasta</button>
+                </div>
+            </form>
         </div>
     </div>
-    <div class="eqp-acoes">
+    <div class="eqp-acoes d-flex gap-2">
         <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary">{{ ico('voltar', 16) }} Categorias</a>
         <button type="button" class="btn btn-principal" 
                 data-bs-toggle="modal" 
@@ -42,108 +68,281 @@
     </div>
 </div>
 
-{# ---------- Tarefas da categoria ---------- #}
-{% if not tarefas %}
-<p class="cat-vazio">Nenhuma tarefa nesta categoria ainda. Adicione abaixo ou crie uma nova.</p>
-{% endif %}
+{# ---------- Painéis de Resumo e Gráficos de Status ---------- #}
+<div class="row g-3 mb-4">
+    <!-- Card Visão Geral -->
+    <div class="col-md-6">
+        <div class="card bg-dark text-white border border-secondary border-opacity-25 p-3 h-100">
+            <h3 class="fs-6 text-secondary mb-3">Visão geral</h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fs-2 fw-bold text-white">{{ tarefas|length }}</div>
+                    <div class="text-secondary small mb-3">Total de tarefas nesta pasta</div>
+                    <div class="fs-5 fw-semibold text-info">{{ pendentes|default(0) + em_andamento|default(0) }}</div>
+                    <div class="text-secondary small">Em aberto</div>
+                </div>
+                <div class="text-center">
+                    <div class="rounded-circle border border-primary border-3 d-flex align-items-center justify-content-center p-4" style="width: 90px; height: 90px;">
+                        <span class="fw-bold fs-6">{{ percentual_concluidas|default(0) }}%</span>
+                    </div>
+                    <span class="text-secondary small mt-1 d-block">concluídas</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<div class="cat-tarefas">
-    {% for tarefa in tarefas %}
-    {% set atrasada = tarefa_atrasada(tarefa) %}
-    {% set prio = tarefa.prioridade or 'A definir' %}
-    <article class="cartao-tarefa cat-tarefa {{ status_classe[tarefa.status] }}">
-        <div class="cat-tarefa-topo">
-            <div class="tarefa-titulo">{{ tarefa.titulo }}</div>
-            <span class="selo">{{ tarefa.status }}</span>
+    <!-- Card Tarefas por Status -->
+    <div class="col-md-6">
+        <div class="card bg-dark text-white border border-secondary border-opacity-25 p-3 h-100">
+            <h3 class="fs-6 text-secondary mb-3">Tarefas por status</h3>
+            <div class="d-flex flex-column gap-2 justify-content-center h-100">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="d-flex align-items-center gap-2"><span class="rounded-circle bg-info d-inline-block" style="width: 10px; height: 10px;"></span> Pendente</span>
+                    <span class="fw-bold">{{ pendentes|default(0) }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="d-flex align-items-center gap-2"><span class="rounded-circle bg-warning d-inline-block" style="width: 10px; height: 10px;"></span> Em andamento</span>
+                    <span class="fw-bold">{{ em_andamento|default(0) }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="d-flex align-items-center gap-2"><span class="rounded-circle bg-success d-inline-block" style="width: 10px; height: 10px;"></span> Concluída</span>
+                    <span class="fw-bold">{{ concluidas|default(0) }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="d-flex align-items-center gap-2"><span class="rounded-circle bg-danger d-inline-block" style="width: 10px; height: 10px;"></span> Cancelada</span>
+                    <span class="fw-bold">{{ canceladas|default(0) }}</span>
+                </div>
+            </div>
         </div>
-        {% if tarefa.descricao %}
-        <div class="tarefa-desc">{{ tarefa.descricao|truncate(80) }}</div>
-        {% endif %}
-        <div class="chips">
-            <span class="chip {{ 'chip-alta' if prio == 'Alta' else ('chip-media' if prio == 'Média' else ('chip-baixa' if prio == 'Baixa' else '')) }}">{{ prio }}</span>
-            {% if tarefa.prazo %}
-            <span class="chip {{ 'chip-atrasada' if atrasada }}">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} (atrasada){% endif %}
-            </span>
-            {% endif %}
-        </div>
-        <div class="cat-tarefa-acoes">
-            <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
-            <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}">
-                <input type="hidden" name="categoria_id" value="">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
-            </form>
-        </div>
-    </article>
-    {% endfor %}
+    </div>
 </div>
 
+{# ---------- Seção de Subpastas ---------- #}
+<section class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fs-5 text-white m-0">Subpastas</h2>
+        <span class="badge bg-secondary">{{ categoria.subpastas|length }} subpasta{{ '' if categoria.subpastas|length == 1 else 's' }}</span>
+    </div>
+    
+    {% if categoria.subpastas %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4 mb-3">
+        {% for sub in categoria.subpastas %}
+        {% set stats = estatisticas_categoria(sub) %}
+        <div class="col">
+            <div class="card bg-dark text-white border border-secondary border-opacity-25 p-3 h-100 shadow-sm rounded-3 position-relative" style="overflow: visible !important;">
+                
+                <!-- Link esticado cobrindo toda a área do cartão perfeitamente -->
+                <a href="{{ url_for('ver_categoria', categoria_id=sub.id) }}" class="stretched-link text-decoration-none"></a>
+                
+                <!-- Topo do Card: Ícone, Nome e Menu ... -->
+                <div class="d-flex justify-content-between align-items-start mb-3" style="position: relative; z-index: 5;">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fs-2" aria-hidden="true">📁</span>
+                        <div>
+                            <h3 class="fs-6 fw-bold text-white mb-0 text-truncate" style="max-width: 150px;" title="{{ sub.nome }}">{{ sub.nome }}</h3>
+                            <span class="text-secondary small">{{ stats.total }} tarefa{{ '' if stats.total == 1 else 's' }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Menu de Três Pontos (...) com z-index alto para flutuar por cima -->
+                    <div class="dropdown" style="position: relative; z-index: 1050;">
+                        <button class="btn btn-dark btn-sm border-secondary text-secondary px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-secondary shadow" style="position: absolute; z-index: 1060;">
+                            <li>
+                                <button type="button" class="dropdown-item text-white" data-bs-toggle="modal" data-bs-target="#modalRenomear{{ sub.id }}">
+                                    Renomear
+                                </button>
+                            </li>
+                            <li><hr class="dropdown-divider border-secondary"></li>
+                            <li>
+                                <form method="POST" action="{{ url_for('excluir_categoria', categoria_id=sub.id) }}" onsubmit="return confirm('Excluir esta subpasta e tudo o que está dentro dela?');">
+                                    <button type="submit" class="dropdown-item text-danger">Excluir</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Capa: Barra de Progresso e Status Gerais -->
+                <div class="mb-3" style="position: relative; z-index: 2;">
+                    <div class="d-flex justify-content-between text-secondary small mb-1">
+                        <span>Progresso geral</span>
+                        <span class="fw-semibold text-white">{{ stats.percentual }}%</span>
+                    </div>
+                    <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.percentual }}%;" aria-valuenow="{{ stats.percentual }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2 flex-wrap text-secondary" style="font-size: 0.75rem;">
+                        <span class="badge bg-dark border border-secondary text-info">Pend.: {{ stats.pendentes }}</span>
+                        <span class="badge bg-dark border border-secondary text-warning">And.: {{ stats.em_andamento }}</span>
+                        <span class="badge bg-dark border border-secondary text-success">Conc.: {{ stats.concluidas }}</span>
+                    </div>
+                </div>
+
+                <!-- Rodapé da Capa: Membros da Subpasta -->
+                <div class="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25 mt-auto" style="position: relative; z-index: 2; font-size: 0.8rem;">
+                    <span class="text-secondary">Acesso:</span>
+                    <div class="d-flex align-items-center gap-1">
+                        {% set membros_pasta = [current_user] %}
+                        {% if sub.compartilhamentos %}
+                            {% for cs in sub.compartilhamentos %}
+                                {% set _ = membros_pasta.append(cs.usuario) %}
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% for m in membros_pasta[:3] %}
+                            <span class="badge bg-secondary text-light rounded-pill px-2 py-1" title="{{ m.nomeUsuario }}">{{ m.nomeUsuario[:6] }}</span>
+                        {% endfor %}
+                        {% if membros_pasta|length > 3 %}
+                            <span class="text-secondary small">+{{ membros_pasta|length - 3 }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Modais de Renomear Subpasta isolados no final -->
+    {% for sub in categoria.subpastas %}
+    <div class="modal fade" id="modalRenomear{{ sub.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border border-secondary">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title">Renomear Subpasta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <form method="POST" action="{{ url_for('renomear_categoria', categoria_id=sub.id) }}">
+                    <div class="modal-body">
+                        <label class="form-label">Novo nome:</label>
+                        <input type="text" name="nome" class="form-control bg-secondary text-white border-0" value="{{ sub.nome }}" maxlength="50" required>
+                    </div>
+                    <div class="modal-footer border-top border-secondary">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-principal btn-sm">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Formulário para criar nova subpasta -->
+    <form method="POST" action="{{ url_for('criar_subpasta', categoria_id=categoria.id) }}" class="d-flex gap-2 mt-3">
+        <input type="text" name="nome" class="form-control bg-dark text-white border-secondary" placeholder="Nome da nova pasta..." maxlength="50" required>
+        <button type="submit" class="btn btn-principal text-nowrap">Criar pasta</button>
+    </form>
+</section>
+
+{# ---------- Tarefas da categoria ---------- #}
+<section class="cartao mb-4 p-3 bg-dark rounded border border-secondary border-opacity-25">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fs-5 text-white m-0">Tarefas nesta pasta</h2>
+        <span class="badge bg-secondary">{{ tarefas|length }} tarefa{{ '' if tarefas|length == 1 else 's' }}</span>
+    </div>
+
+    {% if not tarefas %}
+    <p class="text-secondary small py-2 mb-0">Nenhuma tarefa diretamente nesta pasta.</p>
+    {% endif %}
+
+    <div class="d-flex flex-column gap-2">
+        {% for tarefa in tarefas %}
+        {% set atrasada = tarefa_atrasada(tarefa) %}
+        {% set prio = tarefa.prioridade or 'A definir' %}
+        <div class="p-3 bg-black bg-opacity-50 rounded border border-secondary border-opacity-25">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="text-white fw-bold">{{ tarefa.titulo }}</div>
+                <span class="badge bg-secondary">{{ tarefa.status }}</span>
+            </div>
+            {% if tarefa.descricao %}
+            <div class="text-secondary small mb-2">{{ tarefa.descricao|truncate(80) }}</div>
+            {% endif %}
+            <div class="d-flex gap-2 mb-2 flex-wrap">
+                <span class="badge {{ 'bg-danger' if prio == 'Alta' else ('bg-warning text-dark' if prio == 'Média' else 'bg-secondary') }}">{{ prio }}</span>
+                {% if tarefa.prazo %}
+                <span class="badge bg-dark border border-secondary text-light {{ 'text-danger' if atrasada }}">
+                    {{ tarefa.prazo.strftime('%d/%m/%Y %H:%M') }}{% if atrasada %} (atrasada){% endif %}
+                </span>
+                {% endif %}
+            </div>
+            
+            <div class="d-flex gap-2 align-items-center flex-wrap pt-2 border-top border-secondary border-opacity-25">
+                <a href="{{ url_for('editar_tarefa', tarefa_id=tarefa.id) }}" class="btn btn-principal btn-sm">Editar</a>
+                
+                <form method="POST" action="{{ url_for('mover_tarefa', tarefa_id=tarefa.id) }}" class="m-0">
+                    <select name="nova_categoria_id" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto; font-size: 0.8rem;" onchange="this.form.submit()">
+                        <option value="">Sem pasta (Raiz)</option>
+                        {% for c in categorias_globais %}
+                            <option value="{{ c.id }}" {% if tarefa.categoria_id == c.id %}selected{% endif %}>Mover para: {{ c.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+
+                <form method="POST" action="{{ url_for('definir_categoria', tarefa_id=tarefa.id) }}" class="m-0">
+                    <input type="hidden" name="categoria_id" value="">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Tirar da categoria</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
 {# ---------- Adicionar tarefas existentes ---------- #}
-<section class="cartao cat-existentes mb-5">
-    <div class="eq-secao-cab">
-        <h2 class="eqp-card-titulo">{{ ico('pasta-mais', 20) }} Adicionar tarefas existentes</h2>
+<section class="cartao mb-5 p-3 bg-dark rounded border border-secondary border-opacity-25">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fs-5 text-white m-0">Adicionar tarefas existentes</h2>
         {% if disponiveis %}
-        <span class="eq-contagem">{{ disponiveis|length }} disponíve{{ 'l' if disponiveis|length == 1 else 'is' }}</span>
+        <span class="badge bg-secondary">{{ disponiveis|length }} disponível(is)</span>
         {% endif %}
     </div>
     {% if disponiveis %}
-    <p class="eqp-ajuda">Marque as tarefas que você quer trazer para {{ categoria.nome }}.</p>
+    <p class="text-secondary small">Marque as tarefas que você quer trazer para {{ categoria.nome }}.</p>
     <form method="POST" action="{{ url_for('adicionar_a_categoria', categoria_id=categoria.id) }}">
-        <div class="cat-linhas">
+        <div class="d-flex flex-column gap-2 mb-3">
             {% for t in disponiveis %}
-            <label class="cat-linha" for="t{{ t.id }}">
-                <input class="form-check-input" type="checkbox" name="tarefa_ids" value="{{ t.id }}" id="t{{ t.id }}">
+            <label class="d-flex align-items-center gap-2 p-2 border rounded border-secondary bg-black bg-opacity-50 text-white" for="t{{ t.id }}" style="cursor: pointer;">
+                <input class="form-check-input m-0" type="checkbox" name="tarefa_ids" value="{{ t.id }}" id="t{{ t.id }}">
                 <span>
                     {{ t.titulo }}
-                    {% if t.categoria %}<span class="cat-linha-em">(em {{ t.categoria.nome }})</span>{% endif %}
+                    {% if t.categoria %}<span class="text-secondary small">(em {{ t.categoria.nome }})</span>{% endif %}
                 </span>
             </label>
             {% endfor %}
         </div>
-        <button type="submit" class="btn btn-principal cat-adicionar">{{ ico('plus', 16) }} Adicionar à categoria</button>
+        <button type="submit" class="btn btn-principal">{{ ico('plus', 16) }} Adicionar à categoria</button>
     </form>
     {% else %}
-    <p class="eqp-ajuda">Todas as suas tarefas individuais já estão nesta categoria.</p>
+    <p class="text-secondary small mb-0">Todas as suas tarefas individuais já estão nesta categoria ou em subpastas.</p>
     {% endif %}
 </section>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-      const modalAdd = document.getElementById("modalAdicionarTarefa");
-      if (modalAdd) {
-          modalAdd.addEventListener("show.bs.modal", function (event) {
-              const button = event.relatedTarget;
-              if (button && button.dataset.categoriaId) {
-                  const selectCat = document.getElementById("modalCategoriaTarefa");
-                  if (selectCat) {
-                      selectCat.value = button.dataset.categoriaId;
-                  }
-              }
-          });
-      }
-  });
-</script>
 
 {# ---------- Compartilhar com contatos ---------- #}
-<section class="cartao cat-comp mb-5">
-    <div class="eq-secao-cab">
-        <h2 class="eqp-card-titulo">Compartilhar com contatos</h2>
-        <span class="eq-contagem">{{ compartilhamentos|length }}</span>
+<section class="cartao mb-5 p-3 bg-dark rounded border border-secondary border-opacity-25">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fs-5 text-white m-0">Compartilhar com contatos</h2>
+        <span class="badge bg-secondary">{{ compartilhamentos|length }}</span>
     </div>
 
-    <div class="cat-comp-intro">
-        <p class="eqp-ajuda">Quem tem acesso pode ver, criar e enviar tarefas nesta categoria.</p>
+    <div class="mb-3">
+        <p class="text-secondary small">Quem tem acesso pode ver, criar e enviar tarefas nesta categoria.</p>
         <a href="{{ url_for('ver_categoria_compartilhada', categoria_id=categoria.id) }}" class="btn btn-principal btn-sm">Abrir quadro compartilhado</a>
     </div>
 
-    <div class="cat-comp-bloco">
-        <h3 class="cat-comp-sub">Pessoas com acesso</h3>
+    <div class="mb-3">
+        <h3 class="fs-6 text-white mb-2">Pessoas com acesso</h3>
         {% if compartilhamentos %}
-        <div class="cat-comp-lista">
+        <div class="d-flex flex-column gap-2">
             {% for cs in compartilhamentos %}
-            <div class="eqp-membro">
-                {{ avatar(cs.usuario) }}
-                <span class="eqp-membro-nome">{{ cs.usuario.nomeUsuario }}</span>
+            <div class="d-flex align-items-center justify-content-between p-2 rounded bg-black bg-opacity-50 border border-secondary border-opacity-25">
+                <div class="d-flex align-items-center gap-2">
+                    {{ avatar(cs.usuario) }}
+                    <span class="text-white fw-semibold">{{ cs.usuario.nomeUsuario }}</span>
+                </div>
                 <form method="POST" action="{{ url_for('descompartilhar_categoria', categoria_id=categoria.id, usuario_id=cs.usuario_id) }}">
                     <button type="submit" class="btn btn-outline-secondary btn-sm">Remover acesso</button>
                 </form>
@@ -151,29 +350,36 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="eqp-ajuda mb-0">Ninguém tem acesso a esta categoria ainda.</p>
+        <p class="text-secondary small mb-0">Ninguém tem acesso a esta categoria ainda.</p>
         {% endif %}
     </div>
 
-    {# Só aparece se ainda há contato para adicionar, ou se a pessoa não tem nenhum contato. #}
     {% if convidaveis or not total_contatos %}
-    <div class="cat-comp-bloco">
-        <h3 class="cat-comp-sub">Adicionar pessoa</h3>
+    <div>
+        <h3 class="fs-6 text-white mb-2">Adicionar pessoa</h3>
         {% if convidaveis %}
-        <form method="POST" action="{{ url_for('compartilhar_categoria', categoria_id=categoria.id) }}" class="cat-comp-form">
-            <select name="usuario_id" class="form-select" aria-label="Escolha um contato" required>
+        <form method="POST" action="{{ url_for('compartilhar_categoria', categoria_id=categoria.id) }}" class="d-flex gap-2">
+            <select name="usuario_id" class="form-select bg-dark text-white border-secondary" required>
                 <option value="" disabled selected>Escolha um contato</option>
                 {% for u in convidaveis %}
                 <option value="{{ u.id }}">{{ u.nomeUsuario }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="btn btn-principal">Compartilhar</button>
+            <button type="submit" class="btn btn-principal text-nowrap">Compartilhar</button>
         </form>
         {% else %}
-        <p class="eqp-ajuda mb-0">Você ainda não tem contatos. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
+        <p class="text-secondary small mb-0">Você ainda não tem contatos. <a href="{{ url_for('contatos') }}">Adicionar contatos</a></p>
         {% endif %}
     </div>
     {% endif %}
 </section>
+
+<style>
+.hover-card:hover {
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    transition: all 0.2s ease-in-out;
+}
+</style>
 
 {% endblock %}

@@ -223,6 +223,35 @@ def contar_status(tarefas_lista):
         if t.status in contagem:
             contagem[t.status] += 1
     return list(contagem.values())
+
+def estatisticas_categoria(cat):
+    """Calcula recursivamente tarefas e status de uma categoria e suas subpastas."""
+    def coletar_todas_tarefas(c):
+        t_list = list(c.tarefas) if hasattr(c, 'tarefas') else list(Tarefa.query.filter_by(categoria_id=c.id).all())
+        for sub in c.subpastas:
+            t_list.extend(coletar_todas_tarefas(sub))
+        return t_list
+
+    todas_t = coletar_todas_tarefas(cat)
+    total = len(todas_t)
+    pendentes = sum(1 for t in todas_t if t.status == 'Pendente')
+    em_andamento = sum(1 for t in todas_t if t.status == 'Em andamento')
+    concluidas = sum(1 for t in todas_t if t.status == 'Concluída')
+    canceladas = sum(1 for t in todas_t if t.status == 'Cancelada')
+    pct = int((concluidas / total * 100) if total > 0 else 0)
+    
+    return {
+        'total': total,
+        'pendentes': pendentes,
+        'em_andamento': em_andamento,
+        'concluidas': concluidas,
+        'canceladas': canceladas,
+        'percentual': pct
+    }
+
+# Deixa a função disponível nos templates
+app.jinja_env.globals.update(estatisticas_categoria=estatisticas_categoria)
+
 # ---------------------------------------------------------------
 # Permissões das tarefas
 #   Criador:     vê, edita tudo, muda o status e exclui.
@@ -781,6 +810,51 @@ def criar_categoria():
     flash('Categoria criada.', 'success')
     return redirect(url_for('ver_categorias'))
 
+# Subpastas para categorias
+@app.route('/categorias/<int:categoria_id>/subpasta/criar', methods=['POST'])
+@login_required
+def criar_subpasta(categoria_id):
+    pai = db.get_or_404(Categoria, categoria_id)
+    if pai.usuario_id != current_user.id:
+        flash('Você não pode adicionar subpastas aqui.', 'danger')
+        return redirect(url_for('ver_categorias'))
+        
+    nome = request.form.get('nome', '').strip()[:50]
+    if not nome:
+        flash('Dê um nome para a subpasta.', 'danger')
+        return redirect(url_for('ver_categoria', categoria_id=pai.id))
+        
+    nova_sub = Categoria(nome=nome, usuario_id=current_user.id, parent_id=pai.id)
+    db.session.add(nova_sub)
+    db.session.commit()
+    flash('Subpasta criada com sucesso.', 'success')
+    return redirect(url_for('ver_categoria', categoria_id=pai.id))
+
+# Mover pastas
+@app.route('/categorias/<int:categoria_id>/mover', methods=['POST'])
+@login_required
+def mover_categoria(categoria_id):
+    cat = db.get_or_404(Categoria, categoria_id)
+    if cat.usuario_id != current_user.id:
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('ver_categorias'))
+        
+    novo_pai_id = request.form.get('novo_pai_id', type=int)
+    
+    # Se novo_pai_id for 0 ou vazio, ela vira uma pasta raiz
+    if not novo_pai_id:
+        cat.parent_id = None
+    else:
+        novo_pai = db.get_or_404(Categoria, novo_pai_id)
+        if novo_pai.usuario_id != current_user.id:
+            flash('Pasta de destino inválida.', 'danger')
+            return redirect(url_for('ver_categoria', categoria_id=cat.id))
+        cat.parent_id = novo_pai.id
+        
+    db.session.commit()
+    flash('Pasta movida com sucesso!', 'success')
+    return redirect(url_for('ver_categoria', categoria_id=cat.id))
+
 #excluir categoria
 @app.route('/categorias/<int:categoria_id>/excluir', methods=['POST'])
 @login_required
@@ -794,6 +868,45 @@ def excluir_categoria(categoria_id):
     db.session.commit()
     flash('Categoria excluída. As tarefas ficaram sem categoria.', 'success')
     return redirect(url_for('ver_categorias'))
+
+# Mover tarefa de pasta
+@app.route('/tarefas/<int:tarefa_id>/mover', methods=['POST'])
+@login_required
+def mover_tarefa(tarefa_id):
+    tarefa = db.get_or_404(Tarefa, tarefa_id)
+    if tarefa.criador_id != current_user.id or tarefa.equipe_id:
+        flash('Você só pode mover suas próprias tarefas individuais.', 'danger')
+        return redirect(url_for('quadro'))
+
+    nova_cat_id = request.form.get('nova_categoria_id', type=int)
+    if not nova_cat_id:
+        tarefa.categoria_id = None  # Tira da pasta (vai para sem pasta)
+    else:
+        cat = db.get_or_404(Categoria, nova_cat_id)
+        if cat.usuario_id != current_user.id:
+            flash('Pasta de destino inválida.', 'danger')
+            return redirect(url_for('quadro'))
+        tarefa.categoria_id = cat.id
+
+    db.session.commit()
+    flash('Tarefa movida com sucesso!', 'success')
+    destino = request.referrer or url_for('quadro')
+    return redirect(destino)
+
+# Renomear pastas
+@app.route('/categorias/<int:categoria_id>/renomear', methods=['POST'])
+@login_required
+def renomear_categoria(categoria_id):
+    cat = db.get_or_404(Categoria, categoria_id)
+    if cat.usuario_id != current_user.id:
+        flash('Acesso negado.', 'danger')
+        return redirect(url_for('ver_categorias'))
+    novo_nome = request.form.get('nome', '').strip()[:50]
+    if novo_nome:
+        cat.nome = novo_nome
+        db.session.commit()
+        flash('Pasta renomeada com sucesso!', 'success')
+    return redirect(request.referrer or url_for('ver_categorias'))
 
 # cria rota para gerar arquivo .ics
 @app.route('/tarefa/<int:tarefa_id>/exportar_ics')
@@ -809,16 +922,16 @@ def exportar_ics(tarefa_id):
         fim = (datetime.now() + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
 
     conteudo_ics = f"""BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Gerenciador de Tarefas//PT
-BEGIN:VEVENT
-SUMMARY:{tarefa.titulo}
-DESCRIPTION:{tarefa.descricao or ''}
-DTSTART:{inicio}
-DTEND:{fim}
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR"""
+            VERSION:2.0
+            PRODID:-//Gerenciador de Tarefas//PT
+            BEGIN:VEVENT
+            SUMMARY:{tarefa.titulo}
+            DESCRIPTION:{tarefa.descricao or ''}
+            DTSTART:{inicio}
+            DTEND:{fim}
+            STATUS:CONFIRMED
+            END:VEVENT
+            END:VCALENDAR"""
 
     return Response(
         conteudo_ics,
@@ -866,14 +979,29 @@ def ver_categoria(categoria_id):
     todas = tarefas_individuais()
     dentro = [t for t in todas if t.categoria_id == categoria.id]
     disponiveis = [t for t in todas if t.categoria_id != categoria.id]
+    
+    # Cálculos para os gráficos e painéis de status
+    total_t = len(dentro)
+    pendentes = sum(1 for t in dentro if t.status == 'Pendente')
+    em_andamento = sum(1 for t in dentro if t.status == 'Em andamento')
+    concluidas = sum(1 for t in dentro if t.status == 'Concluída')
+    canceladas = sum(1 for t in dentro if t.status == 'Cancelada')
+    percentual_concluidas = int((concluidas / total_t * 100) if total_t > 0 else 0)
+
     ja = {cs.usuario_id for cs in categoria.compartilhamentos}
     meus_contatos = contatos_aceitos()
     convidaveis = [u for u in meus_contatos if u.id not in ja]
+    
     return render_template('categoria.html', categoria=categoria,
                            tarefas=dentro, disponiveis=disponiveis,
                            compartilhamentos=categoria.compartilhamentos,
                            convidaveis=convidaveis,
-                           total_contatos=len(meus_contatos))
+                           total_contatos=len(meus_contatos),
+                           pendentes=pendentes,
+                           em_andamento=em_andamento,
+                           concluidas=concluidas,
+                           canceladas=canceladas,
+                           percentual_concluidas=percentual_concluidas)
 
 #adicionar a uma categoria
 @app.route('/categorias/<int:categoria_id>/adicionar', methods=['POST'])
