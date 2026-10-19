@@ -1299,3 +1299,35 @@ textarea.form-control { border-radius: 14px; }
 .lc-esqueci { margin: -.2rem 0 1rem; text-align: right; font-size: .85rem; }
 .lc-esqueci a { font-weight: 600; text-decoration: none; color: var(--cor-link); }
 .lc-esqueci a:hover { text-decoration: underline; }
+
+/* ===== Ajustes para celular ===== */
+html { -webkit-text-size-adjust: 100%; }
+
+@media (max-width: 900px) {
+    /* Botões do menu com tamanho confortável para o dedo */
+    .menu-item { min-width: 44px; min-height: 44px; justify-content: center; }
+
+    /* Busca ocupa a largura disponível */
+    .busca-topo { min-width: 0; width: 100%; }
+    .topo-acoes { width: 100%; }
+
+    /* Colunas do quadro crescem normalmente, sem rolagem interna */
+    .coluna, .coluna.eqp-coluna { max-height: none; }
+    .coluna-conteudo { overflow-y: visible; }
+}
+
+@media (max-width: 576px) {
+    /* 16px evita o zoom automático do Safari no iPhone ao tocar nos campos */
+    .form-control, .form-select,
+    .filtro-campo .form-control, .filtro-campo .form-select { font-size: 16px; }
+
+    .conteudo { padding-left: 12px; padding-right: 12px; }
+    .quadro-topo h1 { font-size: 1.3rem; }
+
+    .filtros { padding: 14px; }
+    .filtros-botoes { width: 100%; margin-left: 0; }
+
+    /* Pop-ups de tarefa com menos margem interna */
+    .modal-tarefa .modal-header, .modal-tarefa .modal-footer { padding: 1rem 1.1rem; }
+    .modal-tarefa .modal-body { padding-left: 1.1rem; padding-right: 1.1rem; }
+}
