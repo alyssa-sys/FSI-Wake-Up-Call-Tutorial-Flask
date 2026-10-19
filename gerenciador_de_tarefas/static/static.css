@@ -394,6 +394,39 @@ textarea.form-control { border-radius: var(--raio-peq); }
     .conteudo { padding: 18px 14px 40px; }
 }
 
+/* ===== Menu lateral recolhível (clique no logo "Tarefas") ===== */
+.lateral-reabrir { display: none; }
+@media (min-width: 901px) {
+    .lateral { transition: margin-left .35s ease, opacity .25s ease, visibility 0s linear 0s; }
+    .conteudo { transition: padding-left .35s ease; }
+    .marca { cursor: pointer; }
+
+    /* Menu fora da tela: o espaço dele some e o conteúdo ocupa a tela toda */
+    html.lateral-oculta .lateral {
+        margin-left: -241px; opacity: 0; visibility: hidden;
+        transition: margin-left .35s ease, opacity .25s ease, visibility 0s linear .35s;
+    }
+    html.lateral-oculta .conteudo { padding-left: 68px; }
+
+    /* Botão com o logo que aparece no canto para trazer o menu de volta */
+    .lateral-reabrir {
+        display: flex; position: fixed; top: 16px; left: 16px; z-index: 1030;
+        padding: 0; border: 0; background: transparent; cursor: pointer;
+        opacity: 0; visibility: hidden; transform: scale(.8);
+        transition: opacity .25s ease, transform .25s ease, visibility 0s linear .25s;
+    }
+    html.lateral-oculta .lateral-reabrir {
+        opacity: 1; visibility: visible; transform: scale(1);
+        transition: opacity .3s ease .2s, transform .3s ease .2s, visibility 0s;
+    }
+    .lateral-reabrir .marca-icone svg { transition: transform .2s ease; }
+    .lateral-reabrir:hover .marca-icone { filter: brightness(1.1); }
+    .lateral-reabrir:hover .marca-icone svg { transform: translateX(2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .lateral, .conteudo, .lateral-reabrir { transition: none !important; }
+}
+
 /* ===== Quadro: topo, saudação, busca ===== */
 .quadro-topo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
 .quadro-topo h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em; }
@@ -467,18 +500,18 @@ textarea.form-control { border-radius: var(--raio-peq); }
 .filtros { padding: 18px 24px; margin-bottom: 20px; border-radius: var(--raio); }
 .filtros-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 18px; }
 .filtros-titulo { display: flex; align-items: center; gap: 8px; height: 42px; color: var(--cor-suave); font-weight: 500; margin-right: 8px; }
-.filtro-campo { display: flex; flex-direction: column; gap: 6px; font-size: .75rem; font-weight: 500; color: var(--cor-suave); }
+.filtro-campo { display: flex; flex-direction: column; gap: 6px; font-size: .75rem; font-weight: 500; color: var(--cor-suave); flex: 1 1 110px; min-width: 0; }
 .filtro-campo .form-control, .filtro-campo .form-select {
-    min-width: 150px; height: 42px; padding: 0 .95rem; font-size: .85rem;
+    min-width: 0; width: 100%; height: 42px; padding: 0 .95rem; font-size: .85rem;
     background-color: var(--cor-superficie-2); border-color: transparent; border-radius: 50rem;
 }
 .filtro-campo .form-select { padding-right: 2.2rem; }
 .filtro-campo .form-control:focus, .filtro-campo .form-select:focus { border-color: var(--cor-primaria); }
-.filtro-busca .form-control { min-width: 220px; }
+.filtro-busca { flex: 2 1 180px; }
 /* Os botões ocupam o espaço que sobra à direita dos campos e ficam centralizados nele,
    no meio da altura da barra (align-self: center). */
-.filtros-botoes { display: flex; justify-content: center; gap: 10px; flex: 1 1 9rem; align-self: center; }
-.filtros-botoes .btn { height: 48px; min-width: 7.5rem; padding: 0 32px; font-size: 1rem; justify-content: center; display: inline-flex; align-items: center; border-radius: 50rem; }
+.filtros-botoes { display: flex; justify-content: center; gap: 10px; flex: 0 0 auto; margin-left: auto; align-self: flex-end; }
+.filtros-botoes .btn { height: 42px; min-width: 7.5rem; padding: 0 28px; font-size: .85rem; justify-content: center; display: inline-flex; align-items: center; border-radius: 50rem; }
 /* Com filtro ativo (Aplicar + Limpar): continuam na mesma posição à direita, centralizados
    nesse espaço, mas empilhados (Aplicar em cima) e menores, para caber na altura dos campos
    (rótulo 18px + espaço 6px + campo 42px = 66px) sem aumentar a barra. */

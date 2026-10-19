@@ -84,10 +84,6 @@
             <div class="eq-equipe-corpo">
                 <div class="eq-equipe-nome">{{ e.nome }}</div>
                 <div class="eq-equipe-meta">{{ ico('users', 14) }} {{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
-                <div class="eq-equipe-rodape">
-                    <div class="eq-tags"><span class="eq-tag">Criador</span></div>
-                    <span class="eq-seta">{{ ico('chevron', 18) }}</span>
-                </div>
             </div>
         </a>
         {% endfor %}
@@ -108,22 +104,11 @@
     </div>
     <div class="eq-lista">
         {% for e in participo %}
-        {% set pendentes = e.tarefas|selectattr('status', 'equalto', 'Pendente')|list|length %}
-        {% set concluidas = e.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
         <a href="{{ url_for('ver_equipe', equipe_id=e.id) }}" class="eq-equipe">
             <span class="eq-inicial" aria-hidden="true">{{ e.nome[:1]|upper }}</span>
             <div class="eq-equipe-corpo">
                 <div class="eq-equipe-nome">{{ e.nome }}</div>
                 <div class="eq-equipe-meta">{{ ico('users', 14) }} Criada por {{ e.dono.nomeUsuario }} · {{ e.membros|length }} membro{{ '' if e.membros|length == 1 else 's' }}</div>
-                <div class="eq-equipe-rodape">
-                    <div class="eq-tags">
-                        {% set meu_vinculo = e.membros|selectattr('usuario_id', 'equalto', current_user.id)|list|first %}
-                        <span class="eq-tag">{{ 'Admin' if meu_vinculo and meu_vinculo.cargo == 'admin' else 'Membro' }}</span>
-                        <span class="eq-tag status-pendente">Pendente ({{ pendentes }})</span>
-                        <span class="eq-tag status-concluida">Concluída ({{ concluidas }})</span>
-                    </div>
-                    <span class="eq-seta">{{ ico('chevron', 18) }}</span>
-                </div>
             </div>
         </a>
         {% endfor %}

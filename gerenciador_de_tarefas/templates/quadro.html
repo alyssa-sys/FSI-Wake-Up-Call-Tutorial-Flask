@@ -475,12 +475,18 @@
           });
       };
 
-      // Cancelar: descarta o que foi marcado e volta ao estado salvo
+      // Fecha o pop-up
+      function fecharModal() {
+          const inst = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+          inst.hide();
+      }
+
+      // Cancelar: descarta o que foi marcado (volta ao estado salvo) e fecha o pop-up
       btnCancelar.addEventListener('click', function () {
           caixas().forEach(cb => { cb.checked = salvo[cb.dataset.id]; riscar(cb); });
           mostrarAviso('');
           atualizarBotoes();
-          devolverFoco();
+          fecharModal();
       });
 
       // Salvar: grava só os itens alterados (a rota do servidor inverte o estado a cada chamada)
@@ -533,11 +539,12 @@
               // Tudo certo: remonta a lista (concluídas descem) e volta os botões para desabilitados
               const atuais = itens.map(s => ({ id: s.id, titulo: s.titulo, concluida: !!salvo[s.id] }));
               montarChecklistModal(atuais);
-              mostrarAviso('Alterações salvas.', 'text-success');
-          } else {
-              atualizarBotoes();
-              mostrarAviso('Não foi possível salvar tudo. Confira a lista e tente de novo.', 'text-danger');
+              fecharModal();   // salvou tudo: fecha o pop-up
+              return;
           }
+          // Algo falhou: o pop-up continua aberto para tentar de novo
+          atualizarBotoes();
+          mostrarAviso('Não foi possível salvar tudo. Confira a lista e tente de novo.', 'text-danger');
           devolverFoco();
       });
   })();

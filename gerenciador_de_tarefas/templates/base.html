@@ -19,6 +19,8 @@
             escuro ? "dark" : "light",
           );
           document.documentElement.setAttribute("data-paleta", paleta);
+          if (localStorage.getItem("lateral-oculta") === "1")
+            document.documentElement.classList.add("lateral-oculta");
         } catch (e) {}
       })();
     </script>
@@ -84,6 +86,7 @@
 
     {% if current_user.is_authenticated %}
     <div class="app">
+      <button type="button" class="lateral-reabrir" id="lateralReabrir" aria-label="Mostrar menu" title="Mostrar menu"><span class="marca-icone"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span></button>
       <aside class="lateral" aria-label="Menu principal">
         <a
           class="marca"
@@ -699,6 +702,33 @@
             `;
             container.appendChild(div);
         }
+    </script>
+
+    <script>
+      /* Clicar no logo "Tarefas" esconde/mostra o menu lateral (com animação). O estado fica salvo. */
+      (function () {
+        var marca = document.querySelector(".lateral .marca");
+        var reabrir = document.getElementById("lateralReabrir");
+        if (!marca || !reabrir) return;
+        var raiz = document.documentElement;
+
+        function definir(oculta) {
+          raiz.classList.toggle("lateral-oculta", oculta);
+          marca.setAttribute("aria-expanded", oculta ? "false" : "true");
+          try { localStorage.setItem("lateral-oculta", oculta ? "1" : "0"); } catch (e) {}
+        }
+
+        marca.setAttribute("title", "Esconder menu");
+        definir(raiz.classList.contains("lateral-oculta"));
+
+        marca.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          definir(true);
+        });
+        reabrir.addEventListener("click", function () {
+          definir(false);
+        });
+      })();
     </script>
 
   </body>
