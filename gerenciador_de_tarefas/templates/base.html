@@ -281,6 +281,13 @@
                             <label class="form-label small text-secondary" for="modalFotoPerfil">Foto de Perfil</label>
                             <input type="file" id="modalFotoPerfil" name="foto_perfil" class="form-control bg-dark text-light border-secondary" accept="image/*">
                         </div>
+
+                        <hr class="border-secondary my-4">
+                        <h6 class="fw-bold mb-3">Segurança da conta</h6>
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" style="border-radius:8px;" data-bs-toggle="modal" data-bs-target="#modalSenha">Redefinir senha</button>
+                            <button type="button" class="btn btn-outline-danger btn-sm flex-fill" style="border-radius:8px;" data-bs-toggle="modal" data-bs-target="#modalExcluirConta">Excluir conta</button>
+                        </div>
                     </div>
 
                     <div class="modal-footer border-top border-secondary d-flex justify-content-between align-items-center">
@@ -296,6 +303,64 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal: Redefinir senha -->
+    <div class="modal fade" id="modalSenha" tabindex="-1" aria-labelledby="modalSenhaTitulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content text-light" method="POST" action="{{ url_for('alterar_senha') }}" style="background-color: var(--bs-body-bg, #1a1a1a); border: 1px solid var(--bs-border-color, #333); border-radius: 16px;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold" id="modalSenhaTitulo">Redefinir senha</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary" for="senha_atual">Senha atual</label>
+                        <input type="password" id="senha_atual" name="senha_atual" class="form-control bg-dark text-light border-secondary" autocomplete="current-password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-secondary" for="senha_nova">Nova senha</label>
+                        <input type="password" id="senha_nova" name="senha_nova" class="form-control bg-dark text-light border-secondary" minlength="6" autocomplete="new-password" required>
+                        <div class="form-text">Mínimo de 6 caracteres.</div>
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label small text-secondary" for="senha_confirmar">Confirmar nova senha</label>
+                        <input type="password" id="senha_confirmar" name="senha_confirmar" class="form-control bg-dark text-light border-secondary" minlength="6" autocomplete="new-password" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" data-bs-toggle="modal" data-bs-target="#modalPerfil">Voltar</button>
+                    <button type="submit" class="btn btn-principal btn-sm px-3" style="border-radius:8px;">Salvar nova senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Excluir conta -->
+    <div class="modal fade" id="modalExcluirConta" tabindex="-1" aria-labelledby="modalExcluirTitulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content text-light" method="POST" action="{{ url_for('excluir_conta') }}" style="background-color: var(--bs-body-bg, #1a1a1a); border: 1px solid var(--bs-border-color, #333); border-radius: 16px;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold" id="modalExcluirTitulo">Excluir conta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <p class="fw-semibold mb-2">Essa ação é permanente e não pode ser desfeita.</p>
+                    <ul class="small text-secondary ps-3 mb-3">
+                        <li>Suas tarefas pessoais e categorias serão apagadas.</li>
+                        <li>Tarefas que você enviou a um contato ficam com ele.</li>
+                        <li>Nas equipes, suas tarefas voltam para o criador da equipe. Se você é o criador, o comando passa para outro membro (ou a equipe é apagada, se estiver sozinho).</li>
+                        <li>Seus contatos, convites e foto de perfil serão removidos.</li>
+                    </ul>
+                    <label class="form-label small text-secondary" for="senha_excluir">Digite sua senha para confirmar</label>
+                    <input type="password" id="senha_excluir" name="senha" class="form-control bg-dark text-light border-secondary" autocomplete="current-password" required>
+                </div>
+                <div class="modal-footer border-top border-secondary">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" style="border-radius:8px;" data-bs-toggle="modal" data-bs-target="#modalPerfil">Voltar</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3" style="border-radius:8px;">Excluir minha conta</button>
+                </div>
+            </form>
         </div>
     </div>
 
