@@ -15,7 +15,7 @@
 <div class="eq-topo">
     <div>
         <h1 class="titulo-pagina">{{ categoria.nome }}</h1>
-        <p class="eq-subtitulo">Categoria compartilhada · criada por {{ categoria.dono.nomeUsuario }}</p>
+        <p class="eq-subtitulo">Categoria compartilhada · criada por {{ categoria.usuario.nomeUsuario if categoria.usuario else 'Desconhecido' }}</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
         <a href="{{ url_for('ver_categorias') }}" class="btn btn-outline-secondary">Categorias</a>

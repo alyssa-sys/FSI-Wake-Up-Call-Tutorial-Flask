@@ -59,6 +59,22 @@ class Categoria(db.Model):
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tarefas = db.relationship('Tarefa', backref='categoria', lazy=True)
     dono = db.relationship('Usuario')
+    parent_id = db.Column(db.Integer, db.ForeignKey('categoria.id', ondelete='CASCADE'), nullable=True)
+    subpastas = db.relationship('Categoria', backref=db.backref('pai', remote_side=[id]), cascade='all, delete-orphan')
+    @property
+    def caminho_ancestrais(self):
+        ancestrais = []
+        atual = self.pai
+        while atual:
+            ancestrais.insert(0, atual)
+            atual = atual.pai
+        return ancestrais
+    @property
+    def total_tarefas(self):
+        total = len(self.tarefas)
+        for sub in self.subpastas:
+            total += sub.total_tarefas
+        return total
 
 class Subtarefa(db.Model):
     id = db.Column(db.Integer, primary_key=True)

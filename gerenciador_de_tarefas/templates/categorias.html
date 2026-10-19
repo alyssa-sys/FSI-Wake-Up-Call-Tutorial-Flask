@@ -19,12 +19,12 @@
 <div class="eq-topo">
     <div>
         <h1 class="titulo-pagina">Categorias</h1>
-        <p class="eq-subtitulo">Agrupe suas tarefas por assunto para encontrar tudo mais rápido.</p>
+        <p class="eq-subtitulo">Navegue pelas suas pastas principais ou crie novas estruturas.</p>
     </div>
     <a href="{{ url_for('quadro') }}" class="btn btn-outline-secondary cat-btn-quadro">{{ ico('quadro', 18) }} Quadro</a>
 </div>
 
-{# ---------- Nova categoria ---------- #}
+{# ---------- Nova categoria raiz ---------- #}
 <section class="eq-card eq-card-destaque cat-nova">
     <svg class="eq-deco cat-deco" viewBox="0 0 160 100" aria-hidden="true">
         <path class="cat-deco-pasta" d="M52 22a6 6 0 016-6h20l8 9h36a6 6 0 016 6v40a6 6 0 01-6 6H58a6 6 0 01-6-6z"/>
@@ -35,16 +35,15 @@
     <div class="eq-card-topo">
         <span class="eq-card-icone">{{ ico('pasta-mais', 26) }}</span>
         <div>
-            <h2 class="eq-card-titulo">Nova categoria</h2>
-            <p class="eq-card-sub">Dê um nome curto, como o assunto ou o lugar onde a tarefa acontece.</p>
+            <h2 class="eq-card-titulo">Nova pasta</h2>
+            <p class="eq-card-sub">Crie uma pasta principal para organizar seus assuntos.</p>
         </div>
     </div>
     <form method="POST" action="{{ url_for('criar_categoria') }}" class="eq-form">
-        <label for="nomeCategoria" class="visually-hidden">Nome da categoria</label>
         <div class="eq-form-linha">
             <div class="eq-campo">
                 {{ ico('pasta', 18) }}
-                <input type="text" id="nomeCategoria" name="nome" class="form-control eq-input"
+                <input type="text" name="nome" class="form-control eq-input"
                        placeholder="Ex.: Faculdade, Trabalho, Casa" maxlength="50" required>
             </div>
             <button type="submit" class="btn btn-principal">{{ ico('plus', 16) }} Criar</button>
@@ -52,36 +51,128 @@
     </form>
 </section>
 
-{# ---------- Suas categorias ---------- #}
+{# ---------- Listagem estilo macOS Finder (Apenas Pastas Raiz) ---------- #}
 <section class="eq-secao mb-5">
     <div class="eq-secao-cab">
-        <h2 class="eq-secao-titulo">{{ ico('pasta', 22) }} Suas categorias</h2>
-        <span class="eq-contagem">{{ categorias|length }} categoria{{ '' if categorias|length == 1 else 's' }}</span>
+        <h2 class="eq-secao-titulo">{{ ico('pasta', 22) }} Pastas Principais</h2>
+        {% set raizes = categorias | selectattr('parent_id', 'none') | list %}
+        <span class="eq-contagem">{{ raizes|length }} pasta{{ '' if raizes|length == 1 else 's' }}</span>
     </div>
 
-    {% if not categorias %}
-    <p class="cat-vazio">Você ainda não criou nenhuma categoria.</p>
+    {% if not raizes %}
+    <p class="cat-vazio">Nenhuma pasta principal criada ainda.</p>
     {% endif %}
 
-    <div class="cat-lista">
-        {% for c in categorias %}
-        <div class="cat-card">
-            <a href="{{ url_for('ver_categoria', categoria_id=c.id) }}" class="cat-card-link">
-                <span class="eq-inicial" aria-hidden="true">{{ c.nome[:1]|upper }}</span>
-                <div class="eq-equipe-corpo">
-                    <div class="eq-equipe-nome">{{ c.nome }}</div>
-                    <div class="eq-equipe-meta">{{ ico('tarefa', 14) }} {{ contagem[c.id] }} tarefa{{ '' if contagem[c.id] == 1 else 's' }}</div>
-                </div>
-            </a>
-            <form method="POST" action="{{ url_for('excluir_categoria', categoria_id=c.id) }}"
-                  class="cat-excluir"
-                  onsubmit="return confirm('Excluir a categoria? As tarefas ficam sem categoria.');">
-                <button type="submit" aria-label="Excluir categoria">{{ ico('x', 16) }}</button>
-            </form>
-        </div>
-        {% endfor %}
+    <!-- Grelha Bootstrap libertada de restrições de largura restritivas -->
+    <div class="container-fluid px-0 mb-4">
+        <div class="row g-4 mb-4">
+            {% for c in raizes %}
+            {% set stats = estatisticas_categoria(c) %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card bg-dark text-white border border-secondary border-opacity-25 p-3 h-100 position-relative shadow-sm" style="overflow: visible !important;">
+                    
+                    <!-- Link esticado cobrindo o cartão inteiro -->
+                    <a href="{{ url_for('ver_categoria', categoria_id=c.id) }}" class="stretched-link text-decoration-none"></a>
+                    
+                    <!-- Topo: Ícone, Título e Menu (...) -->
+                    <div class="d-flex justify-content-between align-items-start mb-3" style="position: relative; z-index: 5;">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="fs-2" aria-hidden="true">📁</span>
+                            <div>
+                                <h3 class="fs-6 fw-bold text-white mb-0 text-truncate" style="max-width: 150px;" title="{{ c.nome }}">{{ c.nome }}</h3>
+                                <span class="text-secondary small">{{ stats.total }} tarefa{{ '' if stats.total == 1 else 's' }}</span>
+                            </div>
+                        </div>
 
-        <a href="{{ url_for('quadro', categoria='nenhuma') }}" class="cat-card cat-card-link cat-sem">
+                        <!-- Dropdown flutuante isolado -->
+                        <div class="dropdown" style="position: relative; z-index: 1050;">
+                            <button class="btn btn-dark btn-sm border-secondary text-secondary px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end border-secondary shadow" style="position: absolute; z-index: 1060;">
+                                <li>
+                                    <button type="button" class="dropdown-item text-white" data-bs-toggle="modal" data-bs-target="#modalRenomear{{ c.id }}">
+                                        Renomear
+                                    </button>
+                                </li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                <li>
+                                    <form method="POST" action="{{ url_for('excluir_categoria', categoria_id=c.id) }}" onsubmit="return confirm('Excluir esta pasta e tudo o que está dentro dela?');">
+                                        <button type="submit" class="dropdown-item text-danger">Excluir</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Conteúdo do card (Progresso) com z-index menor para não bloquear o stretched-link -->
+                    <div class="mb-3" style="position: relative; z-index: 2;">
+                        <div class="d-flex justify-content-between text-secondary small mb-1">
+                            <span>Progresso geral</span>
+                            <span class="fw-semibold text-white">{{ stats.percentual }}%</span>
+                        </div>
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.percentual }}%;" aria-valuenow="{{ stats.percentual }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex gap-2 mt-2 flex-wrap text-secondary" style="font-size: 0.75rem;">
+                            <span class="badge bg-dark border border-secondary text-info">Pend.: {{ stats.pendentes }}</span>
+                            <span class="badge bg-dark border border-secondary text-warning">And.: {{ stats.em_andamento }}</span>
+                            <span class="badge bg-dark border border-secondary text-success">Conc.: {{ stats.concluidas }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Rodapé do Card -->
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25 mt-auto" style="position: relative; z-index: 2; font-size: 0.8rem;">
+                        <span class="text-secondary">Acesso:</span>
+                        <div class="d-flex align-items-center gap-1">
+                            {% set membros_pasta = [current_user] %}
+                            {% if c.compartilhamentos %}
+                                {% for cs in c.compartilhamentos %}
+                                    {% set _ = membros_pasta.append(cs.usuario) %}
+                                {% endfor %}
+                            {% endif %}
+                            
+                            {% for m in membros_pasta[:3] %}
+                                <span class="badge bg-secondary text-light rounded-pill px-2 py-1" title="{{ m.nomeUsuario }}">{{ m.nomeUsuario[:6] }}</span>
+                            {% endfor %}
+                            {% if membros_pasta|length > 3 %}
+                                <span class="text-secondary small">+{{ membros_pasta|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Modais de Renomear isolados no final para evitar conflitos de layout #}
+    {% for c in raizes %}
+    <div class="modal fade" id="modalRenomear{{ c.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border border-secondary">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title">Renomear Pasta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <form method="POST" action="{{ url_for('renomear_categoria', categoria_id=c.id) }}">
+                    <div class="modal-body">
+                        <label class="form-label">Novo nome:</label>
+                        <input type="text" name="nome" class="form-control bg-secondary text-white border-0" value="{{ c.nome }}" maxlength="50" required>
+                    </div>
+                    <div class="modal-footer border-top border-secondary">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-principal btn-sm">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="mt-3">
+        <a href="{{ url_for('quadro', categoria='nenhuma') }}" class="cat-card cat-card-link cat-sem w-100 p-3">
             <span class="eq-inicial cat-sem-icone" aria-hidden="true">{{ ico('caixa', 26) }}</span>
             <div class="eq-equipe-corpo">
                 <div class="eq-equipe-nome">Sem categoria</div>
@@ -104,7 +195,7 @@
                 <span class="eq-inicial" aria-hidden="true">{{ cs.categoria.nome[:1]|upper }}</span>
                 <div class="eq-equipe-corpo">
                     <div class="eq-equipe-nome">{{ cs.categoria.nome }}</div>
-                    <div class="eq-equipe-meta">de {{ cs.categoria.dono.nomeUsuario }}</div>
+                    <div class="eq-equipe-meta">de {{ cs.categoria.usuario.nomeUsuario if cs.categoria.usuario else 'Desconhecido' }}</div>
                 </div>
             </a>
         </div>
