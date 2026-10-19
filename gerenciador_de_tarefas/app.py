@@ -100,6 +100,71 @@ def enviar_email_confirmacao(usuario):
         app.logger.error(f'Falha ao enviar e-mail de confirmação: {e}')
         return False
 
+# Redefinição de senha 
+_serializador_senha = URLSafeTimedSerializer(app.config['SECRET_KEY'], salt='redefinir-senha')
+VALIDADE_TOKEN_SENHA_SEGUNDOS = 60 * 60  # o link vale 1 hora
+TAMANHO_MIN_SENHA = 6
+
+def gerar_token_senha(usuario):
+    # Guarda um pedaço do hash da senha atual: assim que a senha muda, o link antigo deixa de valer.
+    return _serializador_senha.dumps({'id': usuario.id, 'v': usuario.senha[-12:]})
+
+def ler_token_senha(token):
+    """Devolve o usuário dono do token, ou None se o link for inválido/expirado/já usado."""
+    try:
+        dados = _serializador_senha.loads(token, max_age=VALIDADE_TOKEN_SENHA_SEGUNDOS)
+    except (SignatureExpired, BadSignature):
+        return None
+    usuario = db.session.get(Usuario, dados.get('id')) if isinstance(dados, dict) else None
+    if not usuario or usuario.senha[-12:] != dados.get('v'):
+        return None
+    return usuario
+
+def validar_nova_senha(nova, confirmar):
+    """Devolve a mensagem de erro, ou None se a senha é válida."""
+    if len(nova) < TAMANHO_MIN_SENHA:
+        return f'A nova senha precisa ter pelo menos {TAMANHO_MIN_SENHA} caracteres.'
+    if nova != confirmar:
+        return 'A confirmação não bate com a nova senha.'
+    return None
+
+def enviar_email_redefinicao(usuario):
+    """Envia o link para criar uma nova senha. Devolve True se enviou, False se deu erro."""
+    remetente = os.environ.get('MAIL_USER')
+    senha = os.environ.get('MAIL_SENHA')
+    if not remetente or not senha:
+        app.logger.error('MAIL_USER / MAIL_SENHA não configurados.')
+        return False
+
+    link = url_for('redefinir_senha', token=gerar_token_senha(usuario), _external=True)
+    msg = EmailMessage()
+    msg['Subject'] = 'Redefinir sua senha - Gerenciador de Tarefas'
+    msg['From'] = remetente
+    msg['To'] = usuario.email
+    msg.set_content(
+        f'Olá, {usuario.nome}!\n\n'
+        f'Para criar uma nova senha, abra o link abaixo (vale por 1 hora):\n{link}\n\n'
+        'Se não foi você que pediu, ignore este e-mail: sua senha continua a mesma.'
+    )
+    msg.add_alternative(
+        f'<p>Olá, {escape(usuario.nome)}!</p>'
+        '<p>Para criar uma nova senha, clique no botão abaixo (vale por 1 hora):</p>'
+        f'<p><a href="{link}" style="background:#4f46e5;color:#fff;padding:12px 20px;'
+        'border-radius:8px;text-decoration:none;display:inline-block">Criar nova senha</a></p>'
+        f'<p style="color:#666;font-size:13px">Ou copie este link: {link}</p>'
+        '<p style="color:#666;font-size:13px">Se não foi você que pediu, ignore este e-mail: sua senha continua a mesma.</p>',
+        subtype='html',
+    )
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(remetente, senha)
+            smtp.send_message(msg)
+        return True
+    except Exception as e:
+        app.logger.error(f'Falha ao enviar e-mail de redefinição de senha: {e}')
+        return False
+
 # Cria função do link para google agenda
 def link_google_calendar(tarefa):
     if not tarefa.prazo:
@@ -455,6 +520,46 @@ def login():
             flash('Usuário/e-mail ou senha incorretos.', 'danger')
 
     return render_template('login.html')
+
+@app.route('/esqueci_senha', methods=['GET', 'POST'])
+def esqueci_senha():
+    if current_user.is_authenticated:
+        return redirect(url_for('perfil'))
+    if request.method == 'POST':
+        identificador = request.form.get('identificador', '').strip()
+        usuario = Usuario.query.filter(
+            (Usuario.email == identificador.lower()) | (Usuario.nomeUsuario == identificador)
+        ).first() if identificador else None
+        if usuario:
+            if usuario.email_verificado:
+                enviar_email_redefinicao(usuario)
+            else:
+                # conta que nunca confirmou o e-mail: manda o link de confirmação no lugar
+                enviar_email_confirmacao(usuario)
+        # Mesma resposta exista a conta ou não, para não revelar quem tem cadastro.
+        flash('Se existir uma conta com esses dados, enviamos um link para o e-mail cadastrado. Veja também o spam.', 'success')
+        return redirect(url_for('login'))
+    return render_template('esqueci_senha.html')
+
+@app.route('/redefinir_senha/<token>', methods=['GET', 'POST'])
+def redefinir_senha(token):
+    usuario = ler_token_senha(token)
+    if not usuario:
+        flash('Link inválido ou expirado. Peça um novo.', 'danger')
+        return redirect(url_for('esqueci_senha'))
+
+    if request.method == 'POST':
+        nova = request.form.get('senha', '')
+        erro = validar_nova_senha(nova, request.form.get('confirmar_senha', ''))
+        if erro:
+            flash(erro, 'danger')
+            return render_template('redefinir_senha.html', token=token)
+        usuario.senha = generate_password_hash(nova)
+        db.session.commit()
+        flash('Senha alterada! Agora você já pode entrar.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('redefinir_senha.html', token=token)
 
 #admin
 @app.route('/admin')
@@ -946,6 +1051,99 @@ def perfil():
         return redirect(request.referrer or url_for('quadro'))
 
     return render_template('perfil.html')
+
+@app.route('/perfil/senha', methods=['POST'])
+@login_required
+def alterar_senha():
+    atual = request.form.get('senha_atual', '')
+    nova = request.form.get('senha_nova', '')
+    if not check_password_hash(current_user.senha, atual):
+        flash('A senha atual está incorreta.', 'danger')
+        return redirect(url_for('perfil'))
+    erro = validar_nova_senha(nova, request.form.get('senha_confirmar', ''))
+    if erro:
+        flash(erro, 'danger')
+        return redirect(url_for('perfil'))
+    if check_password_hash(current_user.senha, nova):
+        flash('A nova senha precisa ser diferente da atual.', 'danger')
+        return redirect(url_for('perfil'))
+    current_user.senha = generate_password_hash(nova)
+    db.session.commit()
+    flash('Senha alterada com sucesso!', 'success')
+    return redirect(url_for('perfil'))
+
+def apagar_dados_do_usuario(uid):
+    """Remove o usuário e tudo que depende dele. Não faz commit (quem chama faz)."""
+    # 1) Equipes que ele criou: passa o comando para outro membro; se não há ninguém, apaga a equipe.
+    for equipe in Equipe.query.filter_by(dono_id=uid).all():
+        outros = [m for m in equipe.membros if m.usuario_id != uid]
+        if outros:
+            novo_dono = next((m for m in outros if m.cargo == 'admin'), outros[0])
+            novo_dono.cargo = 'admin'
+            equipe.dono_id = novo_dono.usuario_id
+        else:
+            for t in list(equipe.tarefas):
+                db.session.delete(t)
+            db.session.delete(equipe)  # membros e convites caem junto (cascade)
+    db.session.flush()
+
+    # 2) Tarefas de equipe: as dele passam para o criador da equipe (as pendentes ficam "Cancelada",
+    #    igual a quando alguém sai da equipe).
+    for t in Tarefa.query.filter(Tarefa.equipe_id.isnot(None),
+                                 or_(Tarefa.criador_id == uid, Tarefa.responsavel_id == uid)).all():
+        dono = t.equipe.dono_id
+        if t.responsavel_id == uid:
+            if t.status != 'Concluída':
+                t.status = 'Cancelada'
+            t.responsavel_id = dono
+        if t.criador_id == uid:
+            t.criador_id = dono
+
+    # 3) Tarefas pessoais: as que ele enviou para um contato ficam com o contato; o resto é apagado.
+    for t in Tarefa.query.filter(Tarefa.equipe_id.is_(None),
+                                 or_(Tarefa.criador_id == uid, Tarefa.responsavel_id == uid)).all():
+        if t.criador_id == uid and t.responsavel_id != uid:
+            t.criador_id = t.responsavel_id
+        else:
+            db.session.delete(t)  # pelo ORM, para apagar as subtarefas junto
+    db.session.flush()
+
+    # 4) Categorias dele (tarefas de outras pessoas nelas só perdem a categoria)
+    for c in Categoria.query.filter_by(usuario_id=uid).all():
+        Tarefa.query.filter_by(categoria_id=c.id).update({'categoria_id': None})
+        db.session.delete(c)  # os compartilhamentos caem junto (cascade)
+    db.session.flush()
+
+    # 5) Vínculos soltos e, por fim, o usuário
+    CategoriaCompartilhada.query.filter_by(usuario_id=uid).delete()
+    ConviteEquipe.query.filter(or_(ConviteEquipe.convidado_id == uid, ConviteEquipe.convidante_id == uid)).delete()
+    MembroEquipe.query.filter_by(usuario_id=uid).delete()
+    Contato.query.filter(or_(Contato.solicitante_id == uid, Contato.destinatario_id == uid)).delete()
+    Usuario.query.filter_by(id=uid).delete()
+
+@app.route('/perfil/excluir', methods=['POST'])
+@login_required
+def excluir_conta():
+    if not check_password_hash(current_user.senha, request.form.get('senha', '')):
+        flash('Senha incorreta. Sua conta não foi excluída.', 'danger')
+        return redirect(url_for('perfil'))
+    if current_user.cargo == 'admin' and Usuario.query.filter_by(cargo='admin').count() <= 1:
+        flash('Você é o único administrador do sistema, então a conta não pode ser excluída.', 'danger')
+        return redirect(url_for('perfil'))
+
+    uid = current_user.id
+    try:
+        apagar_dados_do_usuario(uid)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f'Falha ao excluir a conta {uid}: {e}')
+        flash('Não foi possível excluir a conta agora. Tente de novo.', 'danger')
+        return redirect(url_for('perfil'))
+
+    logout_user()
+    flash('Sua conta foi excluída. Sentiremos sua falta!', 'success')
+    return redirect(url_for('login'))
 
 #criar categoria
 @app.route('/categorias/criar', methods=['POST'])

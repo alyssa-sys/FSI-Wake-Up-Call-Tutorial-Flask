@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Esqueci a senha - Gerenciador de Tarefas{% endblock %}
+{% block content %}
+
+<div class="lc-page">
+  <div class="lc-hero">
+    <section class="lc-intro">
+      <h1 class="lc-headline">Esqueceu a senha? Acontece.</h1>
+      <p class="lc-sub">
+        Informe seu e-mail ou nome de usuário e enviamos um link para você criar uma nova senha.
+      </p>
+    </section>
+
+    <section class="lc-card lc-card-centro">
+      <h2 class="lc-titulo">Recuperar acesso</h2>
+      <p class="lc-desc">O link enviado vale por 1 hora.</p>
+
+      <form method="POST" action="{{ url_for('esqueci_senha') }}">
+        <div class="lc-campo">
+          <label for="identificador">E-mail ou nome de usuário</label>
+          <div class="lc-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            <input
+              type="text"
+              id="identificador"
+              name="identificador"
+              class="form-control lc-input"
+              placeholder="voce@email.com ou seu_usuario"
+              autocomplete="username"
+              required
+              autofocus
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-principal lc-entrar w-100">
+          Enviar link
+        </button>
+      </form>
+
+      <p class="lc-rodape">
+        Lembrou a senha?
+        <a href="{{ url_for('login') }}">Voltar ao login</a>
+      </p>
+    </section>
+  </div>
+</div>
+{% endblock %}
