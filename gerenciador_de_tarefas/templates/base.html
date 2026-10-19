@@ -351,7 +351,7 @@
                                 <select id="modalCategoriaTarefa" name="categoria_id" class="form-select bg-dark text-light border-secondary">
                                     <option value="">Sem categoria</option>
                                     {% for c in categorias_globais %}
-                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.dono.nomeUsuario }}){% endif %}</option>
+                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.usuario.nomeUsuario if c.usuario else 'Desconhecido' }}){% endif %}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -440,7 +440,7 @@
                                 <select id="editCategoria" name="categoria_id" class="form-select bg-dark text-light border-secondary">
                                     <option value="">Sem categoria</option>
                                     {% for c in categorias_globais %}
-                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.dono.nomeUsuario }}){% endif %}</option>
+                                    <option value="{{ c.id }}">{{ c.nome }}{% if c.usuario_id != current_user.id %} (de {{ c.usuario.nomeUsuario if c.usuario else 'Desconhecido' }}){% endif %}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -646,9 +646,21 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            // Resolve o problema de persistência limpando o modal ao fechar/cancelar
             const modalAdicionar = document.getElementById("modalAdicionarTarefa");
             if (modalAdicionar) {
+                // 1. Preenche a categoria automaticamente ao abrir o modal a partir de uma pasta
+                modalAdicionar.addEventListener("show.bs.modal", function (event) {
+                    const button = event.relatedTarget;
+                    if (!button) return;
+
+                    const categoriaId = button.getAttribute("data-categoria-id");
+                    const selectCategoria = modalAdicionar.querySelector("select[name='categoria_id']");
+                    if (selectCategoria && categoriaId) {
+                        selectCategoria.value = categoriaId;
+                    }
+                });
+
+                // 2. Resolve o problema de persistência limpando o modal ao fechar/cancelar
                 modalAdicionar.addEventListener("hidden.bs.modal", function () {
                     const form = document.getElementById("formAdicionarTarefa");
                     if (form) form.reset();
@@ -699,6 +711,31 @@
             `;
             container.appendChild(div);
         }
+    </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+          const modalEditar = document.getElementById("modalEditarTarefa");
+          if (modalEditar) {
+              modalEditar.addEventListener("show.bs.modal", function (event) {
+                  const button = event.relatedTarget;
+                  if (!button) return;
+
+                  const tarefaId = button.getAttribute("data-tarefa-id");
+                  const formEditar = document.getElementById("formEditarTarefa");
+                  if (formEditar) {
+                      formEditar.action = "/editar_tarefa/" + tarefaId;
+                  }
+                  
+                  document.getElementById("editTitulo").value = button.getAttribute("data-tarefa-titulo");
+                  document.getElementById("editDescricao").value = button.getAttribute("data-tarefa-descricao");
+                  document.getElementById("editStatus").value = button.getAttribute("data-tarefa-status");
+                  document.getElementById("editPrioridade").value = button.getAttribute("data-tarefa-prioridade");
+                  document.getElementById("editCategoria").value = button.getAttribute("data-tarefa-categoria");
+                  document.getElementById("editPrazo").value = button.getAttribute("data-tarefa-prazo");
+              });
+          }
+      });
     </script>
 
   </body>

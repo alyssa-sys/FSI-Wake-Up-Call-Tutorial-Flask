@@ -78,22 +78,40 @@
             <h2 class="mb-0">Categorias</h2>
             <a href="{{ url_for('ver_categorias') }}" class="link-suave">Ver pastas</a>
         </div>
-        <div class="cat-resumo-lista">
-        {% for c in categorias[:4] %}
-            {% set qt = c.tarefas|length %}
-            {% set ok = c.tarefas|selectattr('status', 'equalto', 'Concluída')|list|length %}
+        <div class="cat-resumo-lista d-flex flex-column gap-2">
+        {% for c in categorias[:3] %}
+            {% set stats = estatisticas_categoria(c) %}
             <a class="cat-resumo-item" href="{{ url_for('ver_categoria', categoria_id=c.id) }}">
                 <span class="cat-icone">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                 </span>
                 <span class="cat-info">
-                    <span class="cat-topo"><span>{{ c.nome }}</span><small>{{ qt }} tarefa{{ '' if qt == 1 else 's' }}</small></span>
-                    <span class="barra d-block"><span class="d-block" style="height:100%; border-radius:5px; background:var(--cor-primaria); width: {{ ((ok * 100) / qt)|round|int if qt else 0 }}%"></span></span>
+                    <span class="cat-topo"><span>{{ c.nome }}</span><small>{{ stats.total }} tarefa{{ '' if stats.total == 1 else 's' }}</small></span>
+                    <span class="barra d-block"><span class="d-block" style="height:100%; border-radius:5px; background:var(--cor-primaria); width: {{ stats.percentual }}%"></span></span>
                 </span>
             </a>
-        {% else %}
-            <p class="text-secondary small mb-0">Nenhuma categoria ainda. <a href="{{ url_for('ver_categorias') }}">Criar uma pasta</a>.</p>
         {% endfor %}
+
+        {# Bloco Especial: Pasta de Categorias Compartilhadas Comigo #}
+        {% set compartilhadas_comigo = compartilhadas_usuario if compartilhadas_usuario is defined else (current_user.compartilhamentos if current_user.compartilhamentos else []) %}
+        {% if compartilhadas_comigo %}
+            {% set qtd_compartilhadas = compartilhadas_comigo|length %}
+            {% set destino_url = url_for('ver_categoria_compartilhada', categoria_id=compartilhadas_comigo[0].categoria_id) if qtd_compartilhadas == 1 else url_for('ver_categorias') %}
+            
+            <a class="cat-resumo-item" href="{{ destino_url }}">
+                <span class="cat-icone text-info">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                </span>
+                <span class="cat-info">
+                    <span class="cat-topo"><span>Compartilhadas</span><small>{{ qtd_compartilhadas }} pasta{{ '' if qtd_compartilhadas == 1 else 's' }}</small></span>
+                    <span class="barra d-block"><span class="d-block bg-info" style="height:100%; border-radius:5px; width: 100%;"></span></span>
+                </span>
+            </a>
+        {% endif %}
+
+        {% if not categorias and not compartilhadas_comigo %}
+            <p class="text-secondary small mb-0 text-center py-2">Nenhuma categoria encontrada.</p>
+        {% endif %}
         </div>
     </div>
 </section>

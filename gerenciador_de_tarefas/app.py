@@ -49,8 +49,11 @@ app.jinja_env.globals.update(link_google_calendar=link_google_calendar)
 
 @app.context_processor
 def injetar_categorias_globais():
-    if current_user.is_authenticated:
-        return dict(categorias_globais=categorias_acessiveis())
+    try:
+        if current_user and current_user.is_authenticated:
+            return dict(categorias_globais=categorias_acessiveis())
+    except Exception:
+        pass
     return dict(categorias_globais=[])
 
 @app.context_processor
@@ -200,7 +203,20 @@ def categoria_acessivel(categoria):
     ).first() is not None
 
 def membros_da_categoria(categoria):
-    return [categoria.dono] + [cs.usuario for cs in categoria.compartilhamentos]
+    """Retorna a lista de usuários que possuem acesso à categoria (dono + compartilhados)."""
+    # Identifica o usuário proprietário independentemente do nome do relacionamento (usuario ou dono)
+    proprietario = getattr(categoria, 'usuario', None)
+    if not proprietario and hasattr(categoria, 'usuario_id'):
+        proprietario = Usuario.query.get(categoria.usuario_id)
+    
+    membros = [proprietario] if proprietario else []
+    
+    if hasattr(categoria, 'compartilhamentos') and categoria.compartilhamentos:
+        for cs in categoria.compartilhamentos:
+            if cs.usuario and cs.usuario not in membros:
+                membros.append(cs.usuario)
+                
+    return membros
 
 def categoria_valida(valor):
     try:
@@ -238,7 +254,10 @@ def estatisticas_categoria(cat):
     em_andamento = sum(1 for t in todas_t if t.status == 'Em andamento')
     concluidas = sum(1 for t in todas_t if t.status == 'Concluída')
     canceladas = sum(1 for t in todas_t if t.status == 'Cancelada')
-    pct = int((concluidas / total * 100) if total > 0 else 0)
+    
+    pct_conc = int((concluidas / total * 100) if total > 0 else 0)
+    pct_and = int((em_andamento / total * 100) if total > 0 else 0)
+    pct_pend = int((pendentes / total * 100) if total > 0 else 0)
     
     return {
         'total': total,
@@ -246,7 +265,10 @@ def estatisticas_categoria(cat):
         'em_andamento': em_andamento,
         'concluidas': concluidas,
         'canceladas': canceladas,
-        'percentual': pct
+        'percentual': pct_conc,
+        'pct_conc': pct_conc,
+        'pct_and': pct_and,
+        'pct_pend': pct_pend
     }
 
 # Deixa a função disponível nos templates
@@ -586,6 +608,7 @@ def quadro():
                            tarefas=tarefas,
                            grafico=contar_status(tarefas),
                            categorias=categorias_do_usuario(),
+                           compartilhadas_usuario=CategoriaCompartilhada.query.filter_by(usuario_id=current_user.id).all(),
                            equipes_usuario=equipes_usuario,
                            equipe_atual=filtro_equipe,
                            filtrando=filtro_ativo(),

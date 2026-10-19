@@ -195,7 +195,7 @@
                 <span class="eq-inicial" aria-hidden="true">{{ cs.categoria.nome[:1]|upper }}</span>
                 <div class="eq-equipe-corpo">
                     <div class="eq-equipe-nome">{{ cs.categoria.nome }}</div>
-                    <div class="eq-equipe-meta">de {{ cs.categoria.dono.nomeUsuario }}</div>
+                    <div class="eq-equipe-meta">de {{ cs.categoria.usuario.nomeUsuario if cs.categoria.usuario else 'Desconhecido' }}</div>
                 </div>
             </a>
         </div>

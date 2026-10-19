@@ -68,6 +68,9 @@ class Categoria(db.Model):
         for sub in self.subpastas:
             total += sub.total_tarefas
         return total
+    @property
+    def dono(self):
+        return self.usuario
 
 class Subtarefa(db.Model):
     id = db.Column(db.Integer, primary_key=True)
