@@ -248,8 +248,13 @@
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                <small id="modalChecklistAviso" class="me-auto d-none" role="status"></small>
+                <button type="button" id="modalFechar" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                <!-- Sem checklist: botão Editar de sempre -->
                 <button type="button" id="modalEditar" class="btn btn-principal" data-bs-toggle="modal" data-bs-target="#modalEditarTarefa">Editar</button>
+                <!-- Com checklist: Cancelar/Salvar substituem o Editar (começam desabilitados) -->
+                <button type="button" id="modalChecklistCancelar" class="btn btn-outline-secondary btn-checklist d-none" disabled>Cancelar</button>
+                <button type="button" id="modalChecklistSalvar" class="btn btn-principal btn-checklist d-none" disabled>Salvar</button>
             </div>
         </div>
     </div>
@@ -334,45 +339,15 @@
         btnEditar.dataset.prazo = d.prazo || '';
         btnEditar.dataset.subtarefas = d.subtarefas || '[]';
         
-        const wrapper = document.getElementById('modalChecklistWrapper');
-        const container = document.getElementById('modalChecklistContainer');
-        container.innerHTML = '';
-
         if (event.relatedTarget) {
             document.querySelectorAll('.area-clique').forEach(el => el.classList.remove('active-modal-trigger'));
             event.relatedTarget.classList.add('active-modal-trigger');
         }
 
-        try {
-            let subtarefas = JSON.parse(d.subtarefas || '[]');
-            if (subtarefas.length > 0) {
-                wrapper.style.display = 'block';
-
-                // Ordena: pendentes no topo, concluídas no final
-                subtarefas.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
-
-                subtarefas.forEach(sub => {
-                    const label = document.createElement('label');
-                    // 'd-inline-flex' e 'w-auto' limitam a caixa de clique ao tamanho da palavra + checkbox
-                    label.className = 'd-inline-flex align-items-center gap-2 w-auto me-auto px-2 py-1 rounded hover-bg';
-                    label.style.cssText = 'font-size: 0.9rem; cursor: pointer; word-break: break-word; user-select: none;';
-                    label.innerHTML = `
-                        <input type="checkbox" class="form-check-input m-0 subtarefa-check" 
-                               data-id="${sub.id}" 
-                               ${sub.concluida ? 'checked' : ''}
-                               onchange="mudarSubtarefaDinamica(this)">
-                        <span class="sub-texto ${sub.concluida ? 'text-decoration-line-through text-secondary opacity-75' : ''}">
-                            ${sub.titulo}
-                        </span>
-                    `;
-                    container.appendChild(label);
-                });
-            } else {
-                wrapper.style.display = 'none';
-            }
-        } catch(e) {
-            wrapper.style.display = 'none';
-        }
+        // A checklist (e a troca Editar -> Cancelar/Salvar) é montada pelo script lá embaixo
+        let subtarefas = [];
+        try { subtarefas = JSON.parse(d.subtarefas || '[]'); } catch (e) { subtarefas = []; }
+        montarChecklistModal(subtarefas);
     });
 </script>
 
@@ -402,46 +377,167 @@
 {% endif %}
 
 <script>
-  function mudarSubtarefaDinamica(checkbox) {
-      const subId = checkbox.dataset.id;
-      const label = checkbox.closest('label');
-      const textoSpan = label.querySelector('.sub-texto');
-      const container = label.parentNode;
+  /* Checklist do modal de detalhes.
+     Marcar uma caixinha NÃO grava nada: só libera os botões Cancelar/Salvar.
+     - Salvar: grava somente os itens que mudaram.
+     - Cancelar: volta tudo para o que está salvo, sem gravar. */
+  (function () {
+      const wrapper   = document.getElementById('modalChecklistWrapper');
+      const container = document.getElementById('modalChecklistContainer');
+      const btnEditar   = document.getElementById('modalEditar');
+      const btnFechar   = document.getElementById('modalFechar');
+      const btnSalvar   = document.getElementById('modalChecklistSalvar');
+      const btnCancelar = document.getElementById('modalChecklistCancelar');
+      const aviso       = document.getElementById('modalChecklistAviso');
+      const modalEl     = document.getElementById('modalTarefa');
 
-      // 1. Aplica o risco visual e move para o final da lista
-      if (checkbox.checked) {
-          textoSpan.classList.add('text-decoration-line-through', 'text-secondary', 'opacity-75');
-          container.appendChild(label); // Envia para o final
-      } else {
-          textoSpan.classList.remove('text-decoration-line-through', 'text-secondary', 'opacity-75');
-          container.insertBefore(label, container.firstChild); // Traz de volta para o topo
+      let itens = [];   // [{id, titulo}] na ordem exibida
+      let salvo = {};   // id -> true/false: o que está gravado no servidor
+
+      const pendentesPrimeiro = (a, b) => (!!a.concluida === !!b.concluida) ? 0 : (a.concluida ? 1 : -1);
+      const caixas = () => Array.from(container.querySelectorAll('.subtarefa-check'));
+      const mudou  = () => caixas().some(cb => cb.checked !== salvo[cb.dataset.id]);
+
+      function atualizarBotoes() {
+          const libera = mudou();
+          btnSalvar.disabled = !libera;
+          btnCancelar.disabled = !libera;
       }
 
-      // 2. Atualiza o dataset 'data-subtarefas' do elemento acionador para persistir ao reabrir o modal sem dar F5
-      const modalElement = document.getElementById('modalTarefa');
-      const areaCliqueAtiva = document.querySelector('.area-clique[data-bs-target="#modalTarefa"].active-modal-trigger') || 
-                              document.querySelector(`[data-subtarefas*='"id":${subId}']`);
-      
-      if (areaCliqueAtiva) {
-          try {
-              let subs = JSON.parse(areaCliqueAtiva.dataset.subtarefas || '[]');
-              const index = subs.findIndex(s => s.id == subId);
-              if (index !== -1) {
-                  subs[index].concluida = checkbox.checked;
-                  
-                  // Reordena o array para manter os pendentes no topo e concluídos embaixo
-                  subs.sort((a, b) => (a.concluida === b.concluida) ? 0 : a.concluida ? 1 : -1);
-                  areaCliqueAtiva.dataset.subtarefas = JSON.stringify(subs);
+      function mostrarAviso(texto, classe) {
+          aviso.textContent = texto || '';
+          aviso.className = 'me-auto ' + (texto ? classe : 'd-none');
+      }
+
+      function riscar(cb) {
+          const texto = cb.closest('label').querySelector('.sub-texto');
+          texto.classList.toggle('text-decoration-line-through', cb.checked);
+          texto.classList.toggle('text-secondary', cb.checked);
+          texto.classList.toggle('opacity-75', cb.checked);
+      }
+
+      // Quando o botão clicado fica desabilitado o foco se perde e o Esc deixa de fechar o modal.
+      function devolverFoco() {
+          const a = document.activeElement;
+          if (!a || a === document.body || a.disabled) modalEl.focus({ preventScroll: true });
+      }
+
+      // Monta a lista a partir do que está salvo. Chamada toda vez que o modal abre.
+      window.montarChecklistModal = function (lista) {
+          const ordenada = lista.map(s => ({ id: s.id, titulo: s.titulo, concluida: !!s.concluida }))
+                                .sort(pendentesPrimeiro);
+          const temChecklist = ordenada.length > 0;
+
+          itens = ordenada;
+          salvo = {};
+          container.replaceChildren();
+          mostrarAviso('');
+
+          // Com checklist: Cancelar/Salvar no lugar do Editar e sem o botão Fechar. Sem checklist: tudo como antes.
+          wrapper.style.display = temChecklist ? 'block' : 'none';
+          btnEditar.classList.toggle('d-none', temChecklist);
+          btnFechar.classList.toggle('d-none', temChecklist);   // o X do canto já fecha a janela
+          btnSalvar.classList.toggle('d-none', !temChecklist);
+          btnCancelar.classList.toggle('d-none', !temChecklist);
+          btnSalvar.disabled = true;
+          btnCancelar.disabled = true;
+
+          ordenada.forEach(sub => {
+              salvo[sub.id] = sub.concluida;
+
+              const label = document.createElement('label');
+              // 'd-inline-flex' e 'w-auto' limitam a caixa de clique ao tamanho da palavra + checkbox
+              label.className = 'd-inline-flex align-items-center gap-2 w-auto me-auto px-2 py-1 rounded hover-bg';
+              label.style.cssText = 'font-size: 0.9rem; cursor: pointer; word-break: break-word; user-select: none;';
+
+              const cb = document.createElement('input');
+              cb.type = 'checkbox';
+              cb.className = 'form-check-input m-0 subtarefa-check';
+              cb.dataset.id = sub.id;
+              cb.checked = sub.concluida;
+
+              const texto = document.createElement('span');
+              texto.className = 'sub-texto';
+              texto.textContent = sub.titulo;   // textContent: o título nunca vira HTML
+
+              label.append(cb, texto);
+              container.appendChild(label);
+              riscar(cb);
+
+              cb.addEventListener('change', function () {
+                  riscar(cb);
+                  mostrarAviso('');
+                  atualizarBotoes();
+              });
+          });
+      };
+
+      // Cancelar: descarta o que foi marcado e volta ao estado salvo
+      btnCancelar.addEventListener('click', function () {
+          caixas().forEach(cb => { cb.checked = salvo[cb.dataset.id]; riscar(cb); });
+          mostrarAviso('');
+          atualizarBotoes();
+          devolverFoco();
+      });
+
+      // Salvar: grava só os itens alterados (a rota do servidor inverte o estado a cada chamada)
+      btnSalvar.addEventListener('click', async function () {
+          const alterados = caixas().filter(cb => cb.checked !== salvo[cb.dataset.id]);
+          if (!alterados.length) return;
+
+          btnSalvar.disabled = true;
+          btnCancelar.disabled = true;
+          btnSalvar.textContent = 'Salvando…';
+
+          const resultados = await Promise.all(alterados.map(async cb => {
+              try {
+                  const r = await fetch(`/subtarefas/${cb.dataset.id}/toggle`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' }
+                  });
+                  if (!r.ok || r.redirected) return { cb, ok: false };   // redirecionou = sessão expirada
+                  const dados = await r.json();
+                  return { cb, ok: true, valor: !!dados.concluida };
+              } catch (e) {
+                  return { cb, ok: false };
               }
-          } catch(e) { console.error("Erro ao atualizar dataset:", e); }
-      }
+          }));
 
-      // 3. Salva no banco de dados via AJAX/fetch
-      fetch(`/subtarefas/${subId}/toggle`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-      }).catch(error => console.error('Erro ao atualizar subtarefa no servidor:', error));
-  }
+          let problemas = 0;
+          resultados.forEach(res => {
+              if (!res.ok) { problemas++; return; }               // continua marcado para tentar de novo
+              salvo[res.cb.dataset.id] = res.valor;
+              if (res.cb.checked !== res.valor) {                 // servidor ficou diferente do que foi marcado
+                  res.cb.checked = res.valor;
+                  riscar(res.cb);
+                  problemas++;
+              }
+          });
+
+          // Atualiza os dados do cartão (modal de detalhes e botão Editar), para reabrir já certo sem F5
+          const gatilho = document.querySelector('.area-clique.active-modal-trigger');
+          if (gatilho) {
+              const atuais = itens.map(s => ({ id: s.id, titulo: s.titulo, concluida: !!salvo[s.id] }))
+                                  .sort(pendentesPrimeiro);
+              const json = JSON.stringify(atuais);
+              const cartao = gatilho.closest('.cartao-tarefa');
+              (cartao ? cartao.querySelectorAll('[data-subtarefas]') : [gatilho])
+                  .forEach(el => { el.dataset.subtarefas = json; });
+          }
+
+          btnSalvar.textContent = 'Salvar';
+          if (problemas === 0) {
+              // Tudo certo: remonta a lista (concluídas descem) e volta os botões para desabilitados
+              const atuais = itens.map(s => ({ id: s.id, titulo: s.titulo, concluida: !!salvo[s.id] }));
+              montarChecklistModal(atuais);
+              mostrarAviso('Alterações salvas.', 'text-success');
+          } else {
+              atualizarBotoes();
+              mostrarAviso('Não foi possível salvar tudo. Confira a lista e tente de novo.', 'text-danger');
+          }
+          devolverFoco();
+      });
+  })();
 </script>
 
 {% endblock %}

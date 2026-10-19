@@ -53,6 +53,7 @@ class Categoria(db.Model):
     nome = db.Column(db.String(50), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     tarefas = db.relationship('Tarefa', backref='categoria', lazy=True)
+    dono = db.relationship('Usuario')
 
 class Subtarefa(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -247,6 +247,32 @@ textarea.form-control { border-radius: var(--raio-peq); }
     color: var(--cor-sobre-primaria);
 }
 .btn-principal.btn-sm { padding: .3rem .85rem; font-size: .8rem; border-radius: 50rem; }
+
+/* Cancelar e Salvar da checklist: mesmo tamanho (o .btn-principal normal tem padding maior) */
+.modal-footer .btn-checklist {
+    padding: .375rem .75rem;
+    min-width: 7rem;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Botões indisponíveis (ex.: Cancelar/Salvar da checklist antes de marcar algo): cinza, sem destaque */
+.btn-principal:disabled, .btn-principal.disabled,
+.btn-principal:disabled:hover, .btn-principal.disabled:hover {
+    background: var(--cor-superficie-2);
+    border-color: var(--cor-superficie-2);
+    color: var(--cor-suave);
+    opacity: .75;
+    cursor: not-allowed;
+}
+.btn-outline-secondary:disabled, .btn-outline-secondary.disabled,
+.btn-outline-secondary:disabled:hover, .btn-outline-secondary.disabled:hover {
+    background: var(--cor-superficie-2);
+    border-color: transparent;
+    color: var(--cor-suave);
+    opacity: .75;
+    cursor: not-allowed;
+}
 .btn-largo { padding: .65rem 1.2rem; }
 
 .btn-outline-secondary {
