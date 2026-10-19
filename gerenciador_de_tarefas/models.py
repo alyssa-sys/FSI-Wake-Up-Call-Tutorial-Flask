@@ -1,4 +1,5 @@
-from extensions import db
+from extensions import db, agora_local
+from sqlalchemy.orm import deferred
 from flask_login import UserMixin
 from datetime import datetime
 
@@ -12,6 +13,9 @@ class Usuario(db.Model, UserMixin):
     tarefasAtribuidas = db.relationship('Tarefa', backref='responsavel', foreign_keys='Tarefa.responsavel_id', lazy=True)
     cargo = db.Column(db.String(20), nullable=False, default='usuario') #admin ou usuario
     foto_perfil = db.Column(db.String(200), nullable=True, default='default.png')
+    # A foto fica no banco (na Vercel não dá para gravar arquivos). 'deferred' = só é lida quando a foto é pedida.
+    foto_dados = deferred(db.Column(db.LargeBinary, nullable=True))
+    foto_tipo = db.Column(db.String(50), nullable=True)
     ordenacao_quadro = db.Column(db.String(30), nullable=False, default='padrao')
     # # Tabela de associação para conexões entre usuários
     # db.Column('usuario_id', db.Integer, db.ForeignKey('usuario.id'), primary_key=True),
@@ -66,7 +70,7 @@ class Contato(db.Model):
     solicitante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     destinatario_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     status = db.Column(db.String(20), nullable=False, default='pendente')
-    criado_em = db.Column(db.DateTime, default=datetime.now)
+    criado_em = db.Column(db.DateTime, default=agora_local)
     solicitante = db.relationship('Usuario', foreign_keys=[solicitante_id])
     destinatario = db.relationship('Usuario', foreign_keys=[destinatario_id])
     __table_args__ = (db.UniqueConstraint('solicitante_id', 'destinatario_id'),)
@@ -76,7 +80,7 @@ class ConviteEquipe(db.Model):
     equipe_id = db.Column(db.Integer, db.ForeignKey('equipe.id'), nullable=False)
     convidado_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
     convidante_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
-    criado_em = db.Column(db.DateTime, default=datetime.now)
+    criado_em = db.Column(db.DateTime, default=agora_local)
     equipe = db.relationship('Equipe', backref=db.backref('convites', cascade='all, delete-orphan'))
     convidado = db.relationship('Usuario', foreign_keys=[convidado_id])
     convidante = db.relationship('Usuario', foreign_keys=[convidante_id])

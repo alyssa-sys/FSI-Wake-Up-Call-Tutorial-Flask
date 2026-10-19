@@ -1,27 +1,36 @@
 import secrets
 from models import Usuario, Tarefa, Equipe, MembroEquipe, Categoria, Contato, ConviteEquipe, CategoriaCompartilhada, Subtarefa
-from sqlalchemy import or_, and_, text
+from sqlalchemy import or_, and_, text, inspect
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, flash, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, Response, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from extensions import db
+from extensions import db, agora_local
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from werkzeug.utils import secure_filename
 from urllib.parse import quote
 
-# Configuração da pasta de upload de imagens de perfil
-UPLOAD_FOLDER = 'static/uploads'
+# Fotos de perfil: ficam no banco de dados (a Vercel não permite gravar arquivos)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+TAMANHO_MAX_FOTO = 1024 * 1024  # 1 MB
 
 def arquivo_permitido(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'chaveMuitoMuitoSecreta'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gerenciador_de_tarefas.db'
+# static_folder aponta para public/static: a Vercel serve a pasta public/ pela CDN
+# e, rodando local, o Flask serve a mesma pasta.
+app = Flask(__name__, static_folder='public/static')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'chaveMuitoMuitoSecreta')
+
+# Na Vercel: DATABASE_URL = string de conexão do Neon (Postgres).
+# Sem DATABASE_URL (rodando no seu PC) continua usando o SQLite de sempre.
+_db_url = os.environ.get('DATABASE_URL', '').strip()
+if _db_url.startswith('postgres://'):
+    _db_url = 'postgresql://' + _db_url[len('postgres://'):]
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url or 'sqlite:///gerenciador_de_tarefas.db'
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # limite de upload da Vercel: 4,5 MB
 db.init_app(app)
 
 login_manager = LoginManager()
@@ -85,7 +94,7 @@ def tarefa_atrasada(tarefa):
         return False
     if tarefa.status in ['Concluída', 'Cancelada']:
         return False
-    return tarefa.prazo < datetime.now()
+    return tarefa.prazo < agora_local()
 
 LIMITE_TAREFAS_PENDENTES_POR_CONTATO = 5
 LIMITE_PEDIDOS_PENDENTES = 10
@@ -151,13 +160,20 @@ def eh_admin_equipe(equipe):
     return m is not None and m.cargo == 'admin'
 
 def garantir_schema():
+    """Cria as tabelas e acrescenta colunas novas que faltem (funciona em SQLite e Postgres)."""
     db.create_all()
-    colunas = [linha[1] for linha in db.session.execute(text("PRAGMA table_info(membro_equipe)"))]
-    if 'cargo' not in colunas:
-        db.session.execute(text(
-            "ALTER TABLE membro_equipe ADD COLUMN cargo VARCHAR(20) NOT NULL DEFAULT 'membro'"
-        ))
-        db.session.commit()
+    binario = 'BLOB' if db.engine.dialect.name == 'sqlite' else 'BYTEA'
+    novas = [
+        ('membro_equipe', 'cargo', "VARCHAR(20) NOT NULL DEFAULT 'membro'"),
+        ('usuario', 'foto_dados', binario),
+        ('usuario', 'foto_tipo', 'VARCHAR(50)'),
+    ]
+    insp = inspect(db.engine)
+    for tabela, coluna, tipo in novas:
+        existentes = [c['name'] for c in insp.get_columns(tabela)]
+        if coluna not in existentes:
+            db.session.execute(text(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}"))
+            db.session.commit()
 
 def gerar_codigo():
     return secrets.token_hex(3).upper()
@@ -174,7 +190,7 @@ def filtrar_tarefas(tarefas):
     prazo = request.args.get('prazo', '')
     responsavel = request.args.get('responsavel', '')
     categoria = request.args.get('categoria', '')
-    agora = datetime.now()
+    agora = agora_local()
 
     resultado = []
     for t in tarefas:
@@ -695,7 +711,7 @@ def adicionar_tarefa_equipe(equipe_id):
         flash('Tarefa atribuida!', 'success')
         return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
-    return render_template('adicionar_tarefa_equipe.html', equipe=equipe, membros=membros, agora=datetime.now())
+    return render_template('adicionar_tarefa_equipe.html', equipe=equipe, membros=membros, agora=agora_local())
 
 #gerar codigo da equipe
 @app.route('/equipes/<int:equipe_id>/novo_codigo', methods=['POST'])
@@ -780,6 +796,16 @@ def definir_cargo_membro(equipe_id, usuario_id):
         flash(f'{membro.usuario.nomeUsuario} não é mais admin da equipe.', 'success')
     return redirect(url_for('ver_equipe', equipe_id=equipe.id))
 
+# Entrega a foto de perfil que está no banco (os templates continuam usando static/uploads/<nome>)
+@app.route('/static/uploads/<nome>')
+def foto_upload(nome):
+    usuario = Usuario.query.filter_by(foto_perfil=nome).first()
+    if not usuario or not usuario.foto_dados:
+        abort(404)
+    resp = Response(usuario.foto_dados, mimetype=usuario.foto_tipo or 'image/jpeg')
+    resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+    return resp
+
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
 def perfil():
@@ -804,11 +830,14 @@ def perfil():
         if 'foto_perfil' in request.files:
             file = request.files['foto_perfil']
             if file and file.filename != '' and arquivo_permitido(file.filename):
-                filename = secure_filename(f"user_{current_user.id}_{int(datetime.now().timestamp())}_{file.filename}")
-                caminho_pasta = os.path.join(app.root_path, UPLOAD_FOLDER)
-                os.makedirs(caminho_pasta, exist_ok=True)
-                file.save(os.path.join(caminho_pasta, filename))
+                dados = file.read()
+                if len(dados) > TAMANHO_MAX_FOTO:
+                    flash('A foto é grande demais (máximo 1 MB).', 'danger')
+                    return redirect(request.referrer or url_for('quadro'))
+                filename = secure_filename(f"user_{current_user.id}_{int(agora_local().timestamp())}_{file.filename}")
                 current_user.foto_perfil = filename
+                current_user.foto_dados = dados
+                current_user.foto_tipo = file.mimetype or 'image/jpeg'
 
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
@@ -856,8 +885,8 @@ def exportar_ics(tarefa_id):
         inicio = tarefa.prazo.strftime('%Y%m%dT%H%M00')
         fim = (tarefa.prazo + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
     else:
-        inicio = datetime.now().strftime('%Y%m%dT%H%M00')
-        fim = (datetime.now() + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
+        inicio = agora_local().strftime('%Y%m%dT%H%M00')
+        fim = (agora_local() + timedelta(hours=1)).strftime('%Y%m%dT%H%M00')
 
     conteudo_ics = f"""BEGIN:VCALENDAR
 VERSION:2.0
